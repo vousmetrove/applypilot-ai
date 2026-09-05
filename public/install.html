@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07111f" />
+    <title>安装简投浏览器助手</title>
+    <style>
+      :root{color-scheme:dark;font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;background:#07111f;color:#edf5fc}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,#16345d 0,transparent 32rem),#07111f}.shell{width:min(1060px,calc(100% - 32px));margin:auto;padding:26px 0 56px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:11px;color:inherit;text-decoration:none}.mark{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#27d7c4;color:#07111f;font-weight:900}.top a.back{color:#a9bdd1;text-decoration:none;font-size:14px}.hero{padding:64px 0 32px;display:grid;grid-template-columns:1.35fr .65fr;gap:36px;align-items:end}.eyebrow{font-size:12px;letter-spacing:.18em;color:#27d7c4;font-weight:800}.hero h1{font-size:clamp(34px,6vw,62px);letter-spacing:-.055em;line-height:1.05;margin:14px 0 18px;max-width:800px}.hero p{color:#a9bdd1;line-height:1.8;margin:0;max-width:680px}.detect{border:1px solid #ffffff1c;border-radius:18px;padding:22px;background:#ffffff0a}.detect small{color:#849bb2}.detect b{display:block;font-size:20px;margin:7px 0 18px}.primary,.secondary{min-height:48px;border:0;border-radius:11px;padding:0 18px;font-weight:850;font-size:14px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer}.primary{background:#27d7c4;color:#07111f;width:100%}.secondary{background:#ffffff0b;color:#d9e5f0;border:1px solid #ffffff1c}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:20px}.card{border:1px solid #ffffff18;background:#0d1d31;border-radius:16px;padding:20px;min-height:205px}.card.active{border-color:#27d7c477;box-shadow:0 0 0 3px #27d7c414}.card h2{font-size:18px;margin:10px 0}.card p,.card li{color:#9fb2c6;font-size:13px;line-height:1.7}.badge{display:inline-flex;padding:5px 8px;border-radius:99px;background:#ffffff0a;color:#86a0b8;font-size:10px;font-weight:800}.badge.ok{background:#27d7c41a;color:#63e5d6}.steps{margin-top:22px;border:1px solid #ffffff18;border-radius:18px;background:#0b192b;padding:26px}.steps h2{margin:0 0 20px}.step{display:grid;grid-template-columns:42px 1fr;gap:14px;padding:17px 0;border-top:1px solid #ffffff12}.step:first-of-type{border-top:0}.n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#5f8cff1a;color:#83a3ff;font-weight:900}.step b{display:block;margin:2px 0 6px}.step p{margin:0;color:#98adc1;line-height:1.65;font-size:13px}.notice{margin-top:18px;border-left:3px solid #f4b454;background:#f4b45412;padding:14px 16px;color:#d9c39f;font-size:13px;line-height:1.7}.foot{margin-top:28px;color:#7f95aa;font-size:12px;line-height:1.7}@media(max-width:840px){.hero{grid-template-columns:1fr;padding-top:42px}.grid{grid-template-columns:1fr 1fr}}@media(max-width:540px){.grid{grid-template-columns:1fr}.hero h1{font-size:38px}.shell{width:min(100% - 24px,1060px)}}
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="top"><a class="brand" href="/"><span class="mark">简</span><b>简投 ApplyPilot</b></a><a class="back" href="/">返回工作台</a></header>
+      <section class="hero">
+        <div><span class="eyebrow">BROWSER ASSISTANT · MANIFEST V3</span><h1>三步连接电脑，之后档案自动同步</h1><p>同一套扩展适配 Chromium 内核桌面浏览器。安装后无需再复制 JSON；浏览器助手会生成一次性二维码，由手机授权后自动获取你的主档案。</p></div>
+        <aside class="detect"><small>已识别当前环境</small><b id="browserName">正在检测…</b><a class="primary" href="/applypilot-browser-assistant.zip" download>下载适配安装包</a></aside>
+      </section>
+
+      <section class="grid" aria-label="浏览器兼容情况">
+        <article class="card" data-browser="chrome"><span class="badge ok">正式支持</span><h2>Chrome</h2><p>下载解压后，在扩展程序页开启开发者模式并“加载已解压的扩展程序”。应用商店版需完成[Chrome 商店审核]后切换为一键添加。</p></article>
+        <article class="card" data-browser="edge"><span class="badge ok">正式支持</span><h2>Microsoft Edge</h2><p>兼容同一 Manifest V3 包。在 edge://extensions 打开开发人员模式后加载文件夹；后续可发布到[Edge 加载项商店]。</p></article>
+        <article class="card" data-browser="qq"><span class="badge">兼容模式</span><h2>QQ 浏览器</h2><p>仅支持可加载 Chromium 扩展的桌面版本。若当前版本没有扩展管理入口，请改用 Chrome 或 Edge。</p></article>
+        <article class="card" data-browser="quark"><span class="badge">能力检测</span><h2>夸克浏览器</h2><p>桌面版仅在当前版本支持扩展中心或加载本地扩展时可用；手机夸克不能运行本桌面扩展，可直接使用移动工作台。</p></article>
+      </section>
+
+      <section class="steps">
+        <h2>跟着页面完成连接</h2>
+        <div class="step"><span class="n">1</span><div><b>下载并解压</b><p>点击上方按钮，解压到一个不会被误删的文件夹，例如[文档/简投浏览器助手]。不要直接双击压缩包内文件。</p></div></div>
+        <div class="step"><span class="n">2</span><div><b>打开扩展管理页</b><p id="extensionStep">Chrome 输入 chrome://extensions；开启右上角“开发者模式”，点击“加载已解压的扩展程序”，选择解压后的 extension 文件夹。</p></div></div>
+        <div class="step"><span class="n">3</span><div><b>填写简投服务地址</b><p>点击浏览器工具栏中的“简投”图标，填写部署者提供的 HTTPS 服务地址，例如当前站点域名，然后确认浏览器的域名访问授权。</p></div></div>
+        <div class="step"><span class="n">4</span><div><b>手机授权连接</b><p>点击“生成连接二维码”。用手机微信扫码打开[简投设备连接页]，登录后点击“确认连接这台电脑”。</p></div></div>
+        <div class="step"><span class="n">5</span><div><b>打开招聘表单并确认填写</b><p>进入飞书招聘、Moka 或其他申请页，点击“识别当前页面”。确认字段预览后再点“填写”；附件、验证码、声明和最终提交仍由本人完成。</p></div></div>
+        <div class="notice">浏览器安全规则不允许普通网页静默安装扩展。因此“一键安装”的真实含义是：自动识别浏览器、下载正确包、只保留一次浏览器确认。不会伪装成无需授权的静默安装。</div>
+      </section>
+      <p class="foot">扩展不会读取微信聊天记录，也不会保存招聘网站密码。设备令牌可在[简投工作台 → 在线填表 → 已连接设备]随时撤销。</p>
+    </div>
+    <script>
+      const ua=navigator.userAgent;let key="chrome",name="Chrome / Chromium";
+      if(/Edg\//.test(ua)){key="edge";name="Microsoft Edge"}else if(/QQBrowser/i.test(ua)){key="qq";name="QQ 浏览器"}else if(/Quark/i.test(ua)){key="quark";name="夸克浏览器"}
+      document.getElementById("browserName").textContent=name;
+      document.querySelector(`[data-browser="${key}"]`)?.classList.add("active");
+      const guides={edge:"Edge 输入 edge://extensions；开启“开发人员模式”，点击“加载解压缩的扩展”，选择解压后的 extension 文件夹。",qq:"打开 QQ 浏览器扩展管理页；若页面提供“开发者模式/加载已解压扩展”，选择 extension 文件夹；若没有该入口，请改用 Chrome 或 Edge。",quark:"打开夸克扩展中心并检查是否支持本地扩展；若仅提供商店安装，请等待[夸克扩展中心审核版]，或改用 Chrome / Edge。"};
+      if(guides[key])document.getElementById("extensionStep").textContent=guides[key];
+    </script>
+  </body>
+</html>

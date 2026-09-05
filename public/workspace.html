@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07111f" />
+    <meta name="description" content="维护一份覆盖飞书招聘与 Moka 常见字段的主档案，为每个岗位 JD 生成独立重点、独立排序的 ATS 友好简历。" />
+    <title>简投 ApplyPilot｜AI 求职投递工作台</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="主导航">
+        <a class="brand" href="#" aria-label="简投首页">
+          <span class="brand-mark">简</span>
+          <span><b>简投</b><small>APPLYPILOT</small></span>
+        </a>
+
+        <nav class="steps" aria-label="投递流程">
+          <button class="step active" data-view="workspace">
+            <span class="step-index">01</span>
+            <span><b>岗位工作台</b><small>分析 JD 与生成简历</small></span>
+          </button>
+          <button class="step" id="profileNav">
+            <span class="step-index">02</span>
+            <span><b>主简历档案</b><small id="profileStepMeta">待完善</small></span>
+          </button>
+          <button class="step" data-tab="autofill">
+            <span class="step-index">03</span>
+            <span><b>在线填表</b><small>飞书 · Moka · 通用</small></span>
+          </button>
+          <button class="step" data-tab="status">
+            <span class="step-index">04</span>
+            <span><b>投递进度</b><small>一处记录所有岗位</small></span>
+          </button>
+        </nav>
+
+        <div class="privacy-note">
+          <span class="privacy-icon" aria-hidden="true">⌁</span>
+          <div><b>登录态私密同步</b><p>档案实时本机保存，并同步到你的私有空间。</p></div>
+        </div>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div class="mobile-brand"><span class="brand-mark">简</span><b>简投</b></div>
+          <div class="save-state"><span class="save-dot"></span><span id="saveLabel">档案已保存</span></div>
+          <div class="top-actions">
+            <button class="ghost-button" id="loadDemo">载入示例 JD</button>
+            <a class="ghost-button link-button" href="/wechat.html">微信端进度页</a>
+            <button class="profile-button" id="openProfile" aria-label="打开主简历档案">
+              <span class="avatar">求</span>
+              <span><b id="headerName">未命名档案</b><small>编辑主档案</small></span>
+              <span aria-hidden="true">›</span>
+            </button>
+          </div>
+        </header>
+
+        <section class="workspace">
+          <div class="workspace-heading">
+            <div>
+              <span class="eyebrow">NEW APPLICATION</span>
+              <h1>今天要投哪个岗位？</h1>
+              <p>粘贴完整职位描述。每个 JD 都会建立独立版本：重新选择求职定位、项目顺序、经历重点和 ATS 关键词。</p>
+            </div>
+            <div class="profile-health" id="profileHealth">
+              <span class="health-ring"><b id="profilePercent">76</b><small>%</small></span>
+              <span><b>档案完整度</b><small id="profileHint">补充联系方式后即可投递</small></span>
+            </div>
+          </div>
+
+          <section class="jd-card">
+            <div class="jd-fields three-fields">
+              <label>公司名称<input id="companyInput" type="text" placeholder="例如：某 AI 制药公司" /></label>
+              <label>岗位名称<input id="roleInput" type="text" placeholder="例如：AI 产品经理" /></label>
+              <label>优化方向
+                <select id="trackSelect">
+                  <option value="auto">根据 JD 自动判断</option>
+                  <option value="product">AI / 产品方向</option>
+                  <option value="computational">计算生物 / 生信方向</option>
+                  <option value="research">实验研发方向</option>
+                  <option value="solutions">应用科学 / 解决方案</option>
+                  <option value="operations">项目运营 / 职能方向</option>
+                </select>
+              </label>
+            </div>
+            <label class="jd-label" for="jdInput">
+              <span>岗位 JD</span>
+              <span id="jdCount">0 字</span>
+            </label>
+            <textarea id="jdInput" rows="7" placeholder="在这里粘贴职位描述……\n\n建议包含：岗位职责、任职要求、加分项。内容越完整，关键词覆盖和简历改写越准确。"></textarea>
+            <div class="jd-footer">
+              <div class="truth-note"><span>✓</span> 只改写真实经历，不自动添加你没有做过的技能</div>
+              <button class="primary-button" id="analyzeBtn">
+                <span>分析岗位并生成简历</span><span class="button-arrow">↗</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="results hidden" id="results" aria-live="polite">
+            <div class="result-summary">
+              <div class="score-card">
+                <div class="score-gauge" id="scoreGauge"><div><strong id="matchScore">0</strong><span>/100</span></div></div>
+                <div><span class="eyebrow">ATS MATCH · <b id="versionLabel">一岗一版</b></span><h2 id="scoreTitle">岗位匹配度</h2><p id="scoreCopy">等待分析</p></div>
+              </div>
+              <div class="summary-divider"></div>
+              <div class="summary-metric"><span>已覆盖关键词</span><strong id="coveredCount">0</strong><small id="coveredLabel">—</small></div>
+              <div class="summary-metric"><span>建议补强</span><strong id="gapCount">0</strong><small>不会写入虚假能力</small></div>
+              <div class="summary-actions">
+                <button class="secondary-button" id="editProfileFromResult">补充经历</button>
+                <button class="primary-button compact" id="exportWord">导出 Word</button>
+              </div>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="分析结果">
+              <button class="tab active" role="tab" aria-selected="true" data-tab-target="analysis">岗位分析</button>
+              <button class="tab" role="tab" aria-selected="false" data-tab-target="resume">定向简历</button>
+              <button class="tab" role="tab" aria-selected="false" data-tab-target="autofill">在线填表</button>
+              <button class="tab" role="tab" aria-selected="false" data-tab-target="json">结构化 JSON</button>
+              <button class="tab" role="tab" aria-selected="false" data-tab-target="status">投递进度</button>
+            </div>
+
+            <div class="tab-panel" id="analysisPanel">
+              <div class="analysis-grid">
+                <article class="insight-card span-two">
+                  <div class="card-title"><span><i class="icon-box">⌘</i>关键词覆盖</span><small>来自当前 JD</small></div>
+                  <div class="keyword-columns">
+                    <div><h3><span class="status-dot green"></span>你的档案已证明</h3><div class="chips" id="matchedKeywords"></div></div>
+                    <div><h3><span class="status-dot amber"></span>JD 提及但尚无证据</h3><div class="chips gap" id="missingKeywords"></div></div>
+                  </div>
+                </article>
+                <article class="insight-card">
+                  <div class="card-title"><span><i class="icon-box">◎</i>初筛建议</span></div>
+                  <ol class="recommendations" id="recommendations"></ol>
+                </article>
+              </div>
+              <article class="variant-card">
+                <header>
+                  <div><span class="eyebrow">ONE JD · ONE RESUME</span><h3>本岗位专属优化策略</h3></div>
+                  <span class="track-badge" id="trackBadge">自动识别</span>
+                </header>
+                <div class="variant-grid">
+                  <div><small>求职定位</small><b id="positioningText">—</b></div>
+                  <div><small>首要证明</small><b id="primaryEvidenceText">—</b></div>
+                  <div><small>内容调整</small><b id="changeCountText">—</b></div>
+                  <div><small>克制原则</small><b id="excludeText">不写无证据技能</b></div>
+                </div>
+                <div class="hard-fit"><span>硬性条件核对</span><div id="hardRequirements"></div></div>
+              </article>
+            </div>
+
+            <div class="tab-panel hidden" id="resumePanel">
+              <div class="resume-toolbar">
+                <div><b id="resumeFileName">定向简历</b><span>ATS 单栏版 · 已按 JD 重排</span></div>
+                <div><button class="secondary-button" id="copyResume">复制文本</button><button class="primary-button compact" id="exportWord2">导出 Word</button></div>
+              </div>
+              <article class="paper" id="resumePreview"></article>
+            </div>
+
+            <div class="tab-panel hidden" id="autofillPanel">
+              <div class="autofill-layout">
+                <div class="autofill-main">
+                  <span class="eyebrow">BROWSER ASSISTANT · BETA</span>
+                  <h2>把主档案带到在线申请页</h2>
+                  <p>安装一次浏览器助手。以后打开飞书招聘、Moka 或其他公司的申请表，点击扩展即可识别并填写常见字段。</p>
+                  <div class="platforms" role="list" aria-label="支持的平台">
+                    <span role="listitem"><b>飞书招聘</b><small>姓名 / 教育 / 项目等</small></span>
+                    <span role="listitem"><b>Moka</b><small>申请表与标准简历</small></span>
+                    <span role="listitem"><b>通用表单</b><small>按字段文字智能匹配</small></span>
+                  </div>
+                  <div class="autofill-actions">
+                    <a class="primary-button link-button" href="/install.html">打开一键安装向导</a>
+                    <a class="secondary-button link-button" href="/applypilot-browser-assistant.zip" download>直接下载安装包</a>
+                    <button class="secondary-button" id="copyProfileJson">复制数据（备用）</button>
+                  </div>
+                  <div class="install-guide">
+                    <span><b>1</b>自动识别 Chrome / Edge / QQ / 夸克</span><span><b>2</b>安装同一 Manifest V3 扩展</span><span><b>3</b>填写本站地址并授权域名</span><span><b>4</b>手机扫码后确认填写</span>
+                  </div>
+                  <section class="device-manager">
+                    <div class="device-manager-heading"><div><b>已连接设备</b><small>设备令牌仅用于同步档案与接收受控任务</small></div><button class="secondary-button" id="refreshDevices">刷新</button></div>
+                    <div class="device-list" id="deviceList"><span>正在读取设备…</span></div>
+                  </section>
+                </div>
+                <aside class="safety-card">
+                  <span class="safety-badge">人工确认保护</span>
+                  <h3>它会填写，但不会提交</h3>
+                  <p>浏览器助手只在你主动点击时读取当前页面，填入成功的字段会以绿色标记。附件、验证码、承诺声明和最终提交必须由你本人完成。</p>
+                  <div class="safety-list"><span>✓ 不保存招聘网站密码</span><span>✓ 不绕过验证码</span><span>✓ 不批量海投</span></div>
+                </aside>
+              </div>
+            </div>
+
+            <div class="tab-panel hidden" id="jsonPanel">
+              <div class="panel-heading-row">
+                <div><span class="eyebrow">AUTOMATION PAYLOAD</span><h2>结构化投递结果</h2><p>严格按“岗位分析 → 内容优化 → 表单映射 → 附件 → Word → 微信操作”的顺序输出。</p></div>
+                <div class="panel-actions"><button class="secondary-button" id="copyStructuredJson">复制 JSON</button><button class="primary-button compact" id="downloadStructuredJson">下载 JSON</button></div>
+              </div>
+              <pre class="json-output" id="structuredOutput">请先分析一个岗位。</pre>
+            </div>
+
+            <div class="tab-panel hidden" id="statusPanel">
+              <div class="panel-heading-row">
+                <div><span class="eyebrow">APPLICATION TRACKER</span><h2>投递进度</h2><p>新 JD 会先保存为“待投递”；提交后由你手动更新状态，避免虚构外部平台状态。</p></div>
+              </div>
+              <div class="status-note">飞书/Moka 招聘系统面向企业配置，暂无通用候选人状态接口。本页提供跨设备记录，不会冒充外部平台已提交。</div>
+              <div class="application-list" id="applicationList"><div class="empty-state">还没有岗位记录。分析一个 JD 后会自动建立待投递记录。</div></div>
+              <section class="event-monitor">
+                <div class="device-manager-heading"><div><b>浏览器实时活动</b><small>记录页面识别、表单分析与本人确认后的填写结果</small></div><button class="secondary-button" id="refreshEvents">刷新</button></div>
+                <div class="event-list" id="eventList"><span>暂无设备活动。</span></div>
+              </section>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <nav class="mobile-nav" aria-label="移动端导航">
+      <button data-mobile-action="workspace"><span>岗位</span><small>分析</small></button>
+      <button data-mobile-action="profile"><span>档案</span><small>编辑</small></button>
+      <button data-mobile-action="attachments"><span>材料</span><small>上传</small></button>
+      <button data-mobile-action="status"><span>进度</span><small>跟踪</small></button>
+    </nav>
+
+    <div class="dialog-backdrop hidden" id="profileDialog" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+      <section class="profile-dialog">
+        <header><div><span class="eyebrow">MASTER PROFILE · FEISHU / MOKA</span><h2 id="profileTitle">主简历档案</h2><p>一次维护完整事实库；生成简历时只选取当前岗位需要的内容。</p></div><button class="icon-button" id="closeProfile" aria-label="关闭">×</button></header>
+        <nav class="profile-jumps" aria-label="档案分区">
+          <button data-jump="basicSection">基本信息</button><button data-jump="intentionSection">求职意向</button><button data-jump="educationSection">教育与课程</button><button data-jump="experienceSection">经历</button><button data-jump="projectSection">项目</button><button data-jump="achievementSection">成果</button><button data-jump="attachmentSection">材料库</button><button data-jump="customSection">自定义字段</button><button data-jump="sensitiveSection">敏感选填</button>
+        </nav>
+        <div class="profile-form">
+          <div class="form-section" id="basicSection">
+            <div class="section-heading"><span>01</span><h3>基本信息</h3><em class="source-tag">飞书 · Moka 常用</em></div>
+            <div class="field-grid three">
+              <label>中文姓名<input data-profile="name" type="text" /></label>
+              <label>英文姓名<input data-profile="englishName" type="text" placeholder="选填" /></label>
+              <label>手机<input data-profile="phone" type="tel" placeholder="请填写" /></label>
+              <label>邮箱<input data-profile="email" type="email" placeholder="请填写" /></label>
+              <label>性别<input data-profile="gender" type="text" placeholder="选填" /></label>
+              <label>出生日期<input data-profile="birthDate" type="text" placeholder="YYYY-MM-DD，选填" /></label>
+              <label>现居城市<input data-profile="city" type="text" placeholder="城市" /></label>
+              <label>国家 / 地区<input data-profile="countryRegion" type="text" /></label>
+              <label>籍贯<input data-profile="nativePlace" type="text" placeholder="选填" /></label>
+              <label>国籍<input data-profile="nationality" type="text" placeholder="选填" /></label>
+              <label>户籍所在地<input data-profile="householdRegistration" type="text" placeholder="选填" /></label>
+              <label>现居详细地址<input data-profile="currentAddress" type="text" placeholder="部分企业申请表要求" /></label>
+              <label>邮政编码<input data-profile="postalCode" type="text" placeholder="选填" /></label>
+              <label>工作年限<input data-profile="workYears" type="text" placeholder="应届生 / 1年以内" /></label>
+              <label>个人主页 / 作品集<input data-profile="portfolio" type="url" placeholder="选填" /></label>
+              <label>微信 / 其他联系方式<input data-profile="wechat" type="text" placeholder="选填" /></label>
+              <label>证件照准备状态<input data-profile="photoStatus" type="text" placeholder="已准备 / 投递时手动上传" /></label>
+              <label>社交账号<input data-profile="socialAccount" type="text" placeholder="LinkedIn / GitHub / 公众号等" /></label>
+              <label>紧急联系人<input data-profile="emergencyContactName" type="text" placeholder="仅企业明确要求时使用" /></label>
+              <label>紧急联系人电话<input data-profile="emergencyContactPhone" type="tel" placeholder="仅企业明确要求时使用" /></label>
+            </div>
+          </div>
+
+          <div class="form-section" id="intentionSection">
+            <div class="section-heading"><span>02</span><h3>求职意向与申请信息</h3><em class="source-tag">申请表常见</em></div>
+            <div class="field-grid three">
+              <label>目标岗位方向<input data-profile="targetRoleFamilies" type="text" /></label>
+              <label>期望工作城市<input data-profile="targetCities" type="text" /></label>
+              <label>求职类型<input data-profile="jobType" type="text" placeholder="全职 / 实习" /></label>
+              <label>当前求职状态<input data-profile="status" type="text" /></label>
+              <label>最早到岗时间<input data-profile="availableDate" type="text" placeholder="请填写" /></label>
+              <label>期望薪资<input data-profile="salaryExpectation" type="text" placeholder="选填，建议按岗位填写" /></label>
+              <label>是否接受出差<input data-profile="travelPreference" type="text" /></label>
+              <label>是否接受调动 / 派驻<input data-profile="relocationPreference" type="text" /></label>
+              <label>招聘信息来源<input data-profile="applicationSource" type="text" placeholder="每次投递可修改" /></label>
+              <label>内推人 / 推荐码<input data-profile="referrer" type="text" placeholder="有则填写" /></label>
+              <label>在华工作资格<input data-profile="workAuthorization" type="text" /></label>
+              <label>是否服从岗位调剂<input data-profile="roleAdjustment" type="text" placeholder="选填" /></label>
+              <label>期望行业<input data-profile="preferredIndustry" type="text" placeholder="医药 / AI / 生命科学等" /></label>
+              <label>当前单位<input data-profile="currentEmployer" type="text" placeholder="应届生可留空" /></label>
+              <label>当前薪资<input data-profile="currentSalary" type="text" placeholder="选填" /></label>
+              <label>离职通知期<input data-profile="noticePeriod" type="text" placeholder="应届生可留空" /></label>
+              <label>首次参加工作时间<input data-profile="workStartDate" type="text" placeholder="YYYY-MM，选填" /></label>
+              <label>海外经历<input data-profile="overseasExperience" type="text" placeholder="无 / 有，选填" /></label>
+            </div>
+          </div>
+
+          <div class="form-section" id="educationSection">
+            <div class="section-heading"><span>03</span><h3>教育背景</h3><em class="source-tag">标准简历字段</em></div>
+            <h4 class="form-subtitle">硕士</h4>
+            <div class="field-grid three">
+              <label>学校<input data-profile="school" type="text" /></label>
+              <label>学历 / 学位<input data-profile="degree" type="text" /></label>
+              <label>专业<input data-profile="major" type="text" /></label>
+              <label>入学时间<input data-profile="masterStart" type="text" placeholder="YYYY-MM" /></label>
+              <label>毕业时间<input data-profile="graduation" type="text" placeholder="YYYY-MM" /></label>
+              <label>培养方式<input data-profile="masterStudyType" type="text" placeholder="全日制" /></label>
+              <label>学院<input data-profile="masterCollege" type="text" placeholder="选填" /></label>
+              <label>GPA<input data-profile="gpa" type="text" /></label>
+              <label>成绩 / 排名<input data-profile="masterRank" type="text" placeholder="选填" /></label>
+            </div>
+            <label>研究方向<textarea data-profile="masterFocus" rows="2" placeholder="例如：肿瘤免疫、药物递送、计算生物学"></textarea></label>
+            <label>硕士主修课程 <small>飞书 / Moka 教育经历中可能单独要求；可用于岗位关键词匹配</small><textarea data-profile="masterCourses" rows="2" placeholder="请按真实成绩单填写，使用逗号分隔"></textarea></label>
+            <h4 class="form-subtitle">本科</h4>
+            <div class="field-grid three">
+              <label>学校<input data-profile="bachelorSchool" type="text" /></label>
+              <label>学历 / 学位<input data-profile="bachelorDegree" type="text" /></label>
+              <label>专业<input data-profile="bachelorMajor" type="text" /></label>
+              <label>入学时间<input data-profile="bachelorStart" type="text" /></label>
+              <label>毕业时间<input data-profile="bachelorEnd" type="text" /></label>
+              <label>培养方式<input data-profile="bachelorStudyType" type="text" /></label>
+              <label>成绩 / 排名<input data-profile="bachelorRank" type="text" /></label>
+              <label>学院<input data-profile="bachelorCollege" type="text" placeholder="选填" /></label>
+              <label>学位类型<input data-profile="bachelorDegreeType" type="text" placeholder="工学学士" /></label>
+            </div>
+            <label>本科主修课程 <small>请优先填写与目标岗位相关且成绩较好的真实课程</small><textarea data-profile="bachelorCourses" rows="2" placeholder="请按真实成绩单填写，使用逗号分隔"></textarea></label>
+          </div>
+
+          <div class="form-section" id="experienceSection">
+            <div class="section-heading"><span>04</span><h3>工作、科研与校园经历</h3><em class="source-tag">支持按岗位重排</em></div>
+            <h4 class="form-subtitle">经历一</h4>
+            <div class="field-grid three">
+              <label>单位<input data-profile="experience1Org" type="text" /></label>
+              <label>职位 / 身份<input data-profile="experience1Role" type="text" /></label>
+              <label>部门 / 实验室<input data-profile="experience1Department" type="text" /></label>
+              <label>开始时间<input data-profile="experience1Start" type="text" /></label>
+              <label>结束时间<input data-profile="experience1End" type="text" /></label>
+              <label>所在城市<input data-profile="experience1City" type="text" placeholder="选填" /></label>
+            </div>
+            <label>职责与成果 <small>保留数据、方法与真实结果</small><textarea data-profile="experience1Description" rows="4"></textarea></label>
+            <h4 class="form-subtitle">经历二</h4>
+            <div class="field-grid three">
+              <label>单位<input data-profile="experience2Org" type="text" /></label>
+              <label>职位 / 身份<input data-profile="experience2Role" type="text" /></label>
+              <label>部门<input data-profile="experience2Department" type="text" /></label>
+              <label>开始时间<input data-profile="experience2Start" type="text" /></label>
+              <label>结束时间<input data-profile="experience2End" type="text" /></label>
+              <label>所在城市<input data-profile="experience2City" type="text" placeholder="选填" /></label>
+            </div>
+            <label>职责与成果<textarea data-profile="experience2Description" rows="3"></textarea></label>
+            <h4 class="form-subtitle">实习经历（如有）</h4>
+            <div class="field-grid three">
+              <label>实习单位<input data-profile="internshipOrg" type="text" placeholder="无则留空" /></label>
+              <label>实习岗位<input data-profile="internshipRole" type="text" /></label>
+              <label>部门<input data-profile="internshipDepartment" type="text" /></label>
+              <label>开始时间<input data-profile="internshipStart" type="text" /></label>
+              <label>结束时间<input data-profile="internshipEnd" type="text" /></label>
+              <label>所在城市<input data-profile="internshipCity" type="text" /></label>
+            </div>
+            <label>实习职责与成果<textarea data-profile="internshipDescription" rows="3"></textarea></label>
+            <label>其他实习 / 校园 / 志愿经历<textarea data-profile="otherExperience" rows="4"></textarea></label>
+          </div>
+
+          <div class="form-section" id="projectSection">
+            <div class="section-heading"><span>05</span><h3>项目事实库</h3><em class="source-tag">一岗一版核心</em></div>
+            <p class="section-note">请保留完整事实。生成岗位简历时，系统会自动选择更相关的项目、调整顺序和表述重点。</p>
+            <h4 class="form-subtitle">项目一</h4>
+            <div class="field-grid three">
+              <label>项目名称<input data-profile="project1Title" type="text" /></label>
+              <label>项目角色<input data-profile="project1Role" type="text" /></label>
+              <label>项目时间<input data-profile="project1Dates" type="text" placeholder="选填" /></label>
+            </div>
+            <label>完整事实描述 <small>动作 + 方法 + 结果；系统不会修改数字</small><textarea data-profile="project1" rows="5"></textarea></label>
+            <label>项目标签 <small>用于和 JD 匹配，逗号分隔</small><input data-profile="project1Tags" type="text" /></label>
+            <h4 class="form-subtitle">项目二</h4>
+            <div class="field-grid three">
+              <label>项目名称<input data-profile="project2Title" type="text" /></label>
+              <label>项目角色<input data-profile="project2Role" type="text" /></label>
+              <label>项目时间<input data-profile="project2Dates" type="text" placeholder="选填" /></label>
+            </div>
+            <label>完整事实描述<textarea data-profile="project2" rows="5"></textarea></label>
+            <label>项目标签<input data-profile="project2Tags" type="text" /></label>
+          </div>
+
+          <div class="form-section" id="achievementSection">
+            <div class="section-heading"><span>06</span><h3>技能、语言与成果</h3><em class="source-tag">ATS 关键词来源</em></div>
+            <label>技能关键词 <small>技术、实验、软件、分析方法；使用逗号分隔</small><textarea data-profile="skills" rows="4"></textarea></label>
+            <div class="field-grid three">
+              <label>英语及其他语言<input data-profile="english" type="text" /></label>
+              <label>证书<input data-profile="certifications" type="text" placeholder="CET-6 等" /></label>
+              <label>软件工具<input data-profile="tools" type="text" /></label>
+            </div>
+            <label>获奖与奖学金<textarea data-profile="awards" rows="3"></textarea></label>
+            <label>论文、专利与会议成果<textarea data-profile="publications" rows="3"></textarea></label>
+            <label>主档案摘要 <small>这是事实底稿；岗位摘要会另行生成</small><textarea data-profile="summary" rows="4"></textarea></label>
+          </div>
+
+          <div class="form-section" id="attachmentSection">
+            <div class="section-heading"><span>07</span><h3>证书与申请材料库</h3><em class="source-tag">私有云附件</em></div>
+            <p class="section-note">支持 PDF、DOC、DOCX、JPG、PNG，单个文件不超过 20 MB。第三方申请页的文件选择必须由你确认，系统会告诉你该上传哪份。</p>
+            <div class="attachment-uploader">
+              <label>材料类型<select id="attachmentType"><option>学历证明</option><option>学位证明</option><option>成绩单</option><option>语言证书</option><option>资格证书</option><option>作品集</option><option>证件照</option><option>身份证明</option><option>其他材料</option></select></label>
+              <label class="file-picker">选择文件<input id="attachmentInput" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple /></label>
+              <button class="primary-button compact" id="uploadAttachments" type="button">上传所选材料</button>
+            </div>
+            <div class="attachment-list" id="attachmentList"><div class="empty-state">尚未上传材料。</div></div>
+          </div>
+
+          <div class="form-section" id="customSection">
+            <div class="section-heading"><span>08</span><h3>企业自定义字段事实库</h3><em class="source-tag">动态补充</em></div>
+            <p class="section-note">飞书招聘和 Moka 均允许企业管理员新增自定义字段。每行填写“字段名=真实答案”，浏览器助手会优先精确匹配；当前页面仍未识别的必填项会单独列出。</p>
+            <label>自定义问题与答案<textarea data-profile="customQuestions" rows="6" placeholder="例如：\n是否有亲属在本公司任职=否\n是否接受背景调查=是\n可实习时长=6个月"></textarea></label>
+          </div>
+
+          <div class="form-section sensitive-section" id="sensitiveSection">
+            <div class="section-heading"><span>09</span><h3>敏感信息</h3><em class="source-tag warning">默认不自动填写</em></div>
+            <p class="section-note">部分企业可能要求以下内容。它们不进入 Word 简历，证件号码也不会被浏览器助手自动填写。</p>
+            <div class="field-grid three">
+              <label>证件类型<input data-profile="idType" type="text" placeholder="选填" /></label>
+              <label>证件号码<input data-profile="idNumber" type="password" placeholder="建议投递时手填" autocomplete="off" /></label>
+              <label>民族<input data-profile="ethnicity" type="text" placeholder="选填" /></label>
+              <label>政治面貌<input data-profile="politicalStatus" type="text" placeholder="选填" /></label>
+              <label>婚姻状况<input data-profile="maritalStatus" type="text" placeholder="选填" /></label>
+              <label>身高<input data-profile="height" type="text" placeholder="选填" /></label>
+            </div>
+            <label>利益冲突 / 亲属 / 竞业限制说明<textarea data-profile="complianceNotes" rows="3" placeholder="不同公司问题不同，建议只保存通用事实"></textarea></label>
+          </div>
+        </div>
+        <footer><span id="profileSaveState">修改会实时保存并同步；点击空白处或按 Esc 不会关闭</span><div><button class="secondary-button" id="resetProfile">清空档案</button><button class="primary-button compact" id="saveProfile">完成编辑</button></div></footer>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="/docx.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

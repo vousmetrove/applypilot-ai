@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "简投 ApplyPilot 浏览器助手",
+  "version": "1.0.0",
+  "description": "扫码连接简投档案，在本人确认后填写飞书招聘、Moka 与常见申请表；不会自动提交。",
+  "permissions": ["activeTab", "scripting", "storage", "alarms"],
+  "optional_host_permissions": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "简投：识别并填写当前申请表",
+    "default_popup": "popup.html"
+  }
+}

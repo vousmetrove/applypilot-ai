@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="popup.css"><title>简投助手</title></head>
+  <body>
+    <header><span class="logo">简</span><div><b>简投浏览器助手</b><small id="platform">正在识别当前页面…</small></div></header>
+    <main>
+      <section class="config-box" id="backendSetup">
+        <label for="apiBaseInput">简投服务地址</label>
+        <input id="apiBaseInput" type="url" placeholder="https://applypilot.example.com" autocomplete="url">
+        <small>首次使用填写一次。地址由你的部署管理员提供。</small>
+        <button class="secondary" id="saveApiBase">保存并授权连接</button>
+      </section>
+      <section class="profile-state" id="profileState"><span class="state-dot"></span><div><b id="profileName">尚未连接</b><small id="profileMeta">用手机授权后，档案会自动同步</small></div></section>
+      <section class="connect-box" id="connectBox">
+        <button class="primary" id="pairBtn">生成手机连接二维码 <span>↗</span></button>
+        <div class="pairing hidden" id="pairing">
+          <img id="pairingQr" alt="简投设备连接二维码">
+          <b>用微信扫一扫</b>
+          <small>或在手机打开连接链接，配对码 <strong id="pairingCode">—</strong></small>
+          <button class="secondary" id="copyLinkBtn">复制手机连接链接</button>
+          <span id="pairingState">等待手机确认…</span>
+        </div>
+      </section>
+      <section class="remote hidden" id="remoteBox"><b>手机发来的待办任务</b><div id="remoteList"></div></section>
+      <button class="primary" id="fillBtn" disabled>识别并填写当前页面 <span>↗</span></button>
+      <div class="result hidden" id="result"></div>
+      <details><summary>连接失败时的备用导入</summary><div class="details-body"><textarea id="replaceJson" rows="4" placeholder="粘贴从简投工作台复制的填表数据"></textarea><button class="secondary" id="replaceBtn">仅保存到本机</button></div></details>
+      <button class="link" id="changeBackendBtn">更换简投服务地址</button>
+      <button class="link" id="disconnectBtn">断开当前设备</button>
+    </main>
+    <footer><span>只在确认后填写当前页面</span><b>不会自动提交</b></footer>
+    <script src="popup.js"></script>
+  </body>
+</html>
