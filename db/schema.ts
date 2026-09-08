@@ -47,6 +47,7 @@ export const devicePairings = sqliteTable(
     userId: text("user_id").notNull(),
     codeHash: text("code_hash").notNull(),
     tokenHash: text("token_hash"),
+    claimSecretHash: text("claim_secret_hash"),
     deviceName: text("device_name").notNull().default("浏览器助手"),
     status: text("status").notNull().default("pending"),
     expiresAt: text("expires_at").notNull(),

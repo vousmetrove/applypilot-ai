@@ -27,3 +27,9 @@ jobs:
 
       - name: Run public-release checks
         run: npm run release:check
+
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Simulate candidate workflows
+        run: npm run test:browser

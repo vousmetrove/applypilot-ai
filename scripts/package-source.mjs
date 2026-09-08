@@ -1,0 +1,12 @@
+import {execFileSync} from 'node:child_process';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {zipSync,unzipSync} from 'fflate';
+const files=execFileSync('git',['ls-files','-z','--cached','--others','--exclude-standard'],{encoding:'utf8'}).split('\0').filter(Boolean);
+const entries={};
+for(const name of new Set(files)) entries[`applypilot-ai/${name}`]=new Uint8Array(await readFile(name));
+const bytes=zipSync(entries,{level:6,mtime:new Date('2026-01-01T00:00:00Z')});
+const restored=unzipSync(bytes);
+for(const [name,data]of Object.entries(entries))if(!Buffer.from(restored[name]).equals(Buffer.from(data)))throw new Error(`Archive verification failed: ${name}`);
+await mkdir('outputs',{recursive:true});
+await writeFile('outputs/applypilot-ai-public-source.zip',bytes);
+console.log(`Source ZIP verified: ${Object.keys(entries).length} files, ${bytes.byteLength} bytes`);

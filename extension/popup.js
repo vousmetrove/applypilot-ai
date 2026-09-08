@@ -1,9 +1,11 @@
+import {parsePayload} from './profile-core.mjs';
 const $ = s => document.querySelector(s);
 let apiBase = "";
 let savedPayload = null;
 let device = null;
 let currentPairing = null;
 let pairingTimer = null;
+let claiming = false;
 
 function detectPlatform(url = "") {
   if (/jobs?\.feishu\.cn|larksuite/i.test(url)) return "已识别：飞书招聘";
@@ -17,7 +19,7 @@ function updateState(payload) {
   const ready = Boolean(p?.name);
   $("#profileState").classList.toggle("ready", ready);
   $("#profileName").textContent = ready ? p.name : "尚未连接";
-  $("#profileMeta").textContent = ready ? `${p.school || "学校待补充"} · ${p.targetRole || p.targetRoleFamilies || p.major || "岗位待选择"}` : "用手机授权后，档案会自动同步";
+  $("#profileMeta").textContent = ready ? `${p.school || "学校待补充"} · ${p.targetRole || p.targetRoleFamilies || p.major || "岗位待选择"}` : "打开本机工作台填写档案，无需注册";
   $("#connectBox").classList.toggle("hidden", ready || !apiBase);
   $("#fillBtn").disabled = !ready;
   $("#disconnectBtn").classList.toggle("hidden", !device && !ready);
@@ -60,18 +62,10 @@ async function saveApiBase() {
   } catch (error) { showResult(error.message || "服务地址无效", true); }
 }
 
-function parsePayload(raw) {
-  const data = JSON.parse(raw);
-  const payload = data.profile ? data : {schema:"applypilot-profile-v1", profile:data, consent:{autoSubmit:false}};
-  if (!payload.profile?.name) throw new Error("没有找到姓名字段，请重新从简投复制数据");
-  payload.consent = {...payload.consent, autoSubmit:false};
-  return payload;
-}
-
 async function saveRaw(raw) {
   try {
     const payload = parsePayload(raw.trim());
-    await chrome.storage.local.set({applypilotPayload:payload});
+    await chrome.storage.local.set({applypilotPayload:payload,applypilotSource:"local"});
     updateState(payload);
     showResult("档案已保存。现在可以填写当前页面。", false);
   } catch (err) { showResult(err.message || "数据格式无法识别", true); }
@@ -98,8 +92,8 @@ async function syncProfile() {
   try {
     const {data} = await api("/api/device/profile");
     if (!data.profile || !Object.keys(data.profile).length) throw new Error("主档案还是空的，请先在简投工作台填写并保存");
-    savedPayload = data;
-    await chrome.storage.local.set({applypilotPayload:data, applypilotDevice:device});
+    savedPayload = parsePayload(data);
+    await chrome.storage.local.set({applypilotPayload:savedPayload, applypilotDevice:device,applypilotSource:"cloud"});
     updateState(savedPayload);
     return true;
   } catch (error) {
@@ -129,14 +123,16 @@ async function startPairing() {
 }
 
 async function claimPairing() {
-  if (!currentPairing) return;
+  if (!currentPairing || claiming) return;
+  claiming = true;
   try {
-    const {response,data} = await api(`/api/device/pairings/${encodeURIComponent(currentPairing.pairingId)}/claim`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({code:currentPairing.code})});
+    const {response,data} = await api(`/api/device/pairings/${encodeURIComponent(currentPairing.pairingId)}/claim`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({code:currentPairing.code,claimSecret:currentPairing.claimSecret})});
     if (response.status === 202) return;
     if (data.status !== "active" || !data.token) return;
     clearInterval(pairingTimer);
     device = {pairingId:data.pairingId, token:data.token, deviceName:data.deviceName};
     await chrome.storage.local.set({applypilotDevice:device});
+    currentPairing = null;
     $("#pairingState").textContent = "连接成功，正在同步档案…";
     if (await syncProfile()) showResult("设备已连接，主档案已自动同步。", false);
     await loadCommands();
@@ -144,6 +140,8 @@ async function claimPairing() {
     clearInterval(pairingTimer);
     $("#pairingState").textContent = error.message || "配对已失效";
     $("#pairBtn").disabled = false;
+  } finally {
+    claiming = false;
   }
 }
 
@@ -221,7 +219,6 @@ $("#disconnectBtn").addEventListener("click", async () => {
 });
 $("#fillBtn").addEventListener("click", async () => {
   try {
-    if (device?.token) await syncProfile();
     const response = await runOnCurrentTab("APPLYPILOT_FILL");
     showFillResult(response, true);
     await reportEvent("form_filled", {filled:response.filled,requiredMissing:response.requiredMissing?.length || 0});
@@ -231,8 +228,16 @@ $("#fillBtn").addEventListener("click", async () => {
 chrome.tabs.query({active:true,currentWindow:true}).then(([tab]) => $("#platform").textContent = detectPlatform(tab?.url));
 chrome.storage.local.get(["applypilotPayload","applypilotDevice","applypilotApiBase"]).then(async ({applypilotPayload,applypilotDevice,applypilotApiBase}) => {
   apiBase = applypilotApiBase || ""; device = applypilotDevice || null; updateState(applypilotPayload || null); updateBackendState();
-  if (device?.token) await syncProfile();
   await loadCommands();
   if (device?.token) await reportEvent("page_detected");
   chrome.runtime.sendMessage({type:"APPLYPILOT_POLL_COMMANDS"});
+});
+$("#openWorkbench").addEventListener("click", () => chrome.runtime.openOptionsPage());
+$("#importFile").addEventListener("change", async event => {
+  const file=event.target.files[0]; if (!file) return;
+  if(file.size > 1024*1024) {showResult("档案 JSON 不能超过 1 MB",true); return;}
+  await saveRaw(await file.text()); event.target.value="";
+});
+chrome.storage.onChanged.addListener((changes,area) => {
+  if(area === 'local' && changes.applypilotPayload) updateState(changes.applypilotPayload.newValue || null);
 });

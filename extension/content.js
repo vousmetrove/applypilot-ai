@@ -29,7 +29,7 @@
     ["targetRole", ["应聘职位", "申请职位", "目标岗位", "期望职位", "position", "job title"]],
     ["targetCities", ["期望城市", "意向城市", "期望工作地点", "preferred location"]],
     ["jobType", ["求职类型", "工作类型", "全职实习", "employment type"]],
-    ["availableDate", ["到岗时间", "最早到岗", "入职时间", "available date", "notice period"]],
+    ["availableDate", ["到岗时间", "最早到岗", "入职时间", "available date"]],
     ["salaryExpectation", ["期望薪资", "期望月薪", "expected salary"]],
     ["currentSalary", ["当前薪资", "目前薪资", "current salary"]],
     ["noticePeriod", ["离职通知期", "通知期", "notice period"]],
@@ -43,7 +43,7 @@
     ["workAuthorization", ["工作资格", "合法工作", "work authorization"]],
     ["roleAdjustment", ["服从调剂", "岗位调剂"]],
     ["overseasExperience", ["海外经历", "留学经历", "overseas experience"]],
-    ["status", ["到岗时间", "求职状态", "可入职时间", "availability"]],
+    ["status", ["求职状态", "availability"]],
     ["skills", ["专业技能", "技能", "skills", "核心技能"]],
     ["selfIntroduction", ["自我评价", "个人总结", "个人简介", "自我介绍", "summary", "profile"]],
     ["experience1Org", ["工作单位", "任职公司", "公司名称", "研究单位", "organization", "company"]],
@@ -62,14 +62,25 @@
 
   const normalize = s => String(s || "").toLowerCase().replace(/[\s*：:（）()\[\]_-]/g, "");
   const visible = el => { const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return s.display !== "none" && s.visibility !== "hidden" && r.width > 0 && r.height > 0; };
-  const forbidden = text => /验证码|captcha|密码|password|身份证|证件号码|承诺|声明|同意|签名|搜索/.test(text);
+  const forbidden = text => /验证码|captcha|密码|password|身份证|证件号码|证件类型|nationalid|socialsecurity|ssn|passport|承诺|声明|同意|签名|signature|搜索|search|firstname|lastname/.test(text);
+  const written = new WeakMap();
+  const currentValue = el => String(el.isContentEditable ? el.textContent : el.value || '').trim();
+  function labelText(node) {
+    if (!node) return '';
+    const clone=node.cloneNode(true);
+    clone.querySelectorAll('input,textarea,select,button').forEach(el => el.remove());
+    return clone.textContent.trim();
+  }
+  function fieldHints(el) {
+    const labels=[...(el.labels || [])].map(labelText);
+    const labelled=(el.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => labelText(document.getElementById(id)));
+    const container=el.closest("[class*='form-item'], [class*='formItem'], [class*='field'], [role='group']");
+    const nearby=container?.querySelectorAll('input,textarea,select,[contenteditable]').length === 1 ? labelText(container) : '';
+    return [...labels,...labelled,el.getAttribute('aria-label'),el.placeholder,nearby,el.name,el.id,el.getAttribute('data-field')].filter(Boolean).map(normalize);
+  }
 
   function fieldText(el) {
-    const direct = [el.name, el.id, el.placeholder, el.getAttribute("aria-label"), el.getAttribute("data-field")].filter(Boolean).join(" ");
-    const labels = [...(el.labels || [])].map(x => x.innerText).join(" ");
-    const container = el.closest("label, [class*='form-item'], [class*='formItem'], [class*='field'], [role='group'], .ant-form-item, .semi-form-field");
-    const nearby = container ? (container.innerText || "").slice(0, 100) : "";
-    return normalize(`${direct} ${labels} ${nearby}`);
+    return fieldHints(el).join(' ');
   }
 
   function rawFieldText(el) {
@@ -81,6 +92,7 @@
   function bestValue(el, profile) {
     const text = fieldText(el);
     if (!text || forbidden(text)) return null;
+    const hints = fieldHints(el);
     const customMatch = String(profile.customQuestions || "").split("\n").map(line => line.trim()).filter(Boolean).map(line => {
       const index = line.search(/[=＝:：]/);
       return index > 0 ? {question:normalize(line.slice(0,index)), value:line.slice(index + 1).trim()} : null;
@@ -111,9 +123,10 @@
       for (const alias of aliases) {
         const needle = normalize(alias);
         if (!needle) continue;
-        if (text === needle) score = Math.max(score, 100);
-        else if (text.startsWith(needle)) score = Math.max(score, 78);
-        else if (text.includes(needle)) score = Math.max(score, 55);
+        for (const hint of hints) {
+          if (hint === needle) score = Math.max(score, 100 + needle.length / 100);
+          else if (hint.includes(needle) && needle.length > 2) score = Math.max(score, 55 + needle.length / 100);
+        }
       }
       if (score && (!best || score > best.score)) best = {key, value:String(value), score};
     }
@@ -123,7 +136,7 @@
   function setTextValue(el, value) {
     if (el.isContentEditable) { el.focus(); el.textContent = value; el.dispatchEvent(new InputEvent("input", {bubbles:true,inputType:"insertText",data:value})); return true; }
     if (el.tagName === "SELECT") {
-      const option = [...el.options].find(o => normalize(o.text).includes(normalize(value)) || normalize(value).includes(normalize(o.text)));
+      const option = [...el.options].find(o => !o.disabled && o.value && (normalize(o.text) === normalize(value) || normalize(o.value) === normalize(value)));
       if (!option) return false;
       el.value = option.value;
     } else {
@@ -135,7 +148,7 @@
     el.dispatchEvent(new Event("input", {bubbles:true}));
     el.dispatchEvent(new Event("change", {bubbles:true}));
     el.dispatchEvent(new Event("blur", {bubbles:true}));
-    return true;
+    return el.tagName === 'SELECT' ? Boolean(el.value) : currentValue(el) === String(value).trim();
   }
 
   function mark(el) {
@@ -153,9 +166,9 @@
       if (el.disabled || el.readOnly || !visible(el)) { skipped++; continue; }
       const match = bestValue(el, profile);
       if (!match || match.score < 55) { skipped++; continue; }
-      const current = (el.value || el.textContent || "").trim();
-      if (current && !el.dataset.applypilotFilled) { skipped++; continue; }
-      if (setTextValue(el, match.value)) { mark(el); filled++; } else skipped++;
+      const current = currentValue(el);
+      if (written.has(el) ? current !== written.get(el) : Boolean(current)) { skipped++; continue; }
+      if (setTextValue(el, match.value)) { written.set(el,currentValue(el)); mark(el); filled++; } else skipped++;
     }
     const requiredMissing = elements.filter(el => visible(el) && !el.disabled && (el.required || el.getAttribute("aria-required") === "true" || /\*/.test(rawFieldText(el))) && !(el.value || el.textContent || "").trim()).map(rawFieldText).filter(Boolean);
     const attachmentFields = [...document.querySelectorAll('input[type="file"]')].filter(visible).map(el => ({field_label:rawFieldText(el) || "附件上传",accept:el.accept || "由企业配置决定"}));

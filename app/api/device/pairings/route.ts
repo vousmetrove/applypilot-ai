@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { corsJson, optionsResponse, randomPairingCode, sha256Hex } from "@/lib/device-auth";
+import {newSecret,hashSecret} from '@/lib/pairing-core.mjs';
 
 export function OPTIONS() {
   return optionsResponse();
@@ -11,16 +12,19 @@ export async function POST(request: Request) {
   const id = crypto.randomUUID();
   const code = randomPairingCode();
   const codeHash = await sha256Hex(`${id}:${code}`);
+  const claimSecret=newSecret();
+  const claimSecretHash=await hashSecret(claimSecret);
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
   await env.DB.prepare(
-    "INSERT INTO device_pairings (id, user_id, code_hash, device_name, status, expires_at, created_at) VALUES (?, '', ?, ?, 'pending', ?, ?)",
-  ).bind(id, codeHash, deviceName, expiresAt, new Date().toISOString()).run();
+    "INSERT INTO device_pairings (id, user_id, code_hash, claim_secret_hash, device_name, status, expires_at, created_at) VALUES (?, '', ?, ?, ?, 'pending', ?, ?)",
+  ).bind(id, codeHash, claimSecretHash, deviceName, expiresAt, new Date().toISOString()).run();
 
   const origin = new URL(request.url).origin;
   return corsJson({
     pairingId: id,
     code,
+    claimSecret,
     expiresAt,
     confirmUrl: `${origin}/connect/${encodeURIComponent(id)}?code=${encodeURIComponent(code)}`,
   }, 201);

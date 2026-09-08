@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { activePairing, corsJson, optionsResponse } from "@/lib/device-auth";
+import { createPayload } from "@/public/profile-core.mjs";
 
 export function OPTIONS() {
   return optionsResponse();
@@ -14,8 +15,7 @@ export async function GET(request: Request) {
   await env.DB.prepare("UPDATE device_pairings SET last_seen_at = ? WHERE id = ?")
     .bind(new Date().toISOString(), pairing.id).run();
   return corsJson({
-    schema: "applypilot-profile-v2",
-    profile: row ? JSON.parse(row.profile_json || "{}") : {},
+    ...createPayload(row ? JSON.parse(row.profile_json || "{}") : {}),
     updatedAt: row?.updated_at || null,
     consent: { autoSubmit: false, sensitiveAutofill: false },
   });

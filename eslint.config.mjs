@@ -17,6 +17,9 @@ const eslintConfig = defineConfig([
     "outputs/**",
     ".wrangler/**",
     ".sites-runtime/**",
+    "public/vendor/**",
+    "test-results/**",
+    "playwright-report/**",
   ]),
   {
     files: ["components/ui/**/*.{ts,tsx}", "hooks/use-mobile.ts"],

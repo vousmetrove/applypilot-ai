@@ -12,7 +12,8 @@ async function pollCommands() {
   } catch {}
 }
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(details => {
+  if (details.reason === "install") chrome.runtime.openOptionsPage();
   chrome.alarms.create("applypilot-command-poll", { periodInMinutes: 1 });
   pollCommands();
 });

@@ -358,3 +358,6 @@ h1 { font-size: clamp(30px, 4vw, 48px); line-height: 1.08; letter-spacing: -.04e
   #resumePreview, #resumePreview * { visibility: visible; }
   #resumePreview { position: absolute; inset: 0; width: 100%; border: 0; box-shadow: none; }
 }
+
+.local-tools{margin-bottom:24px}.local-tools p{line-height:1.7;color:#aab8ca;margin:12px 0}.local-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.local-actions input{max-width:200px}.local-tools details{margin-top:20px}.local-tools summary{cursor:pointer}.local-tools input[type=file]{max-width:100%}
+.rewrite-row{padding:18px 0;border-top:1px solid #2b3c52}.rewrite-columns{display:grid;grid-template-columns:1fr 1fr;gap:20px}.rewrite-columns textarea{width:100%;min-height:110px;padding:12px;line-height:1.7;resize:vertical;background:#101d30;color:#e2ebf8;border:1px solid #526b88;border-radius:8px}.rewrite-columns p{white-space:pre-wrap;overflow-wrap:anywhere}.upload-consent{display:block;margin:18px 0;font-size:13px;line-height:1.7}.upload-consent input{width:auto}.local-actions{margin-top:15px}@media(max-width:700px){.rewrite-columns{grid-template-columns:1fr}}

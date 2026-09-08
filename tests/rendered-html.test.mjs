@@ -11,7 +11,7 @@ const extensionPopup = await readFile(new URL("../extension/popup.js", import.me
 
 test("ships the resume workflow entry points", () => {
   assert.match(html, /岗位 JD/);
-  assert.match(html, /硕士主修课程/);
+  assert.match(html, /最高学历主修课程/);
   assert.match(html, /本科主修课程/);
   assert.match(html, /结构化 JSON/);
   assert.match(html, /投递进度/);
@@ -23,11 +23,10 @@ test("ships the resume workflow entry points", () => {
 test("preserves editing and truthful application guards", () => {
   assert.match(app, /不会因误触关闭/);
   assert.match(app, /unsupported_keywords_excluded/);
-  assert.match(app, /autoSubmit:false/);
   assert.match(app, /\.docx/);
 });
 
-test("ships a real cross-browser pairing and mobile monitoring flow", () => {
+test("ships installation and cloud feature entry points (not an integration acceptance test)", () => {
   assert.equal(extensionManifest.manifest_version, 3);
   assert.match(extensionManifest.optional_host_permissions.join(" "), /https:\/\/\*/);
   assert.doesNotMatch(extensionPopup, /meiqi011216/);

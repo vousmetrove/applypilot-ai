@@ -1,6 +1,6 @@
 {
   "name": "applypilot-ai",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "JD-aware resume optimization and assisted form filling for Chinese recruiting platforms.",
   "private": true,
   "license": "MIT",
@@ -16,9 +16,15 @@
     "lint": "node scripts/run-tool.mjs eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "node scripts/run-tool.mjs drizzle-kit generate",
     "extension:check": "node --check extension/background.js && node --check extension/content.js && node --check extension/popup.js",
-    "extension:package": "bash scripts/package-extension.sh",
-    "public:package": "bash scripts/package-public-source.sh",
-    "release:check": "npm run lint && npm test && npm run extension:check && npm run extension:package && node scripts/public-release-check.mjs"
+    "extension:package": "node scripts/build-assets.mjs",
+    "public:package": "node scripts/public-release-check.mjs && node scripts/package-source.mjs",
+    "release:check": "npm run lint && npm test && npm run extension:check && npm run extension:package && node scripts/public-release-check.mjs",
+    "assets:build": "node scripts/build-assets.mjs",
+    "predev": "npm run assets:build",
+    "prebuild": "npm run assets:build",
+    "test:unit": "node --test tests/profile-core.test.mjs tests/pdf-tools.test.mjs tests/rewrite-service.test.mjs tests/pairing-core.test.mjs",
+    "test:browser": "node scripts/run-browser-tests.mjs",
+    "serve:local": "npm run assets:build && node scripts/serve-local.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -30,10 +36,12 @@
     "date-fns": "^4.4.0",
     "drizzle-orm": "0.45.2",
     "embla-carousel-react": "^8.6.0",
+    "fflate": "^0.8.3",
     "input-otp": "^1.4.2",
     "lucide-react": "^1.31.0",
     "next": "16.2.6",
     "next-themes": "^0.4.6",
+    "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
     "radix-ui": "^1.6.7",
     "react": "19.2.6",
@@ -49,6 +57,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",

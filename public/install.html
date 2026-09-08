@@ -13,7 +13,7 @@
     <div class="shell">
       <header class="top"><a class="brand" href="/"><span class="mark">简</span><b>简投 ApplyPilot</b></a><a class="back" href="/">返回工作台</a></header>
       <section class="hero">
-        <div><span class="eyebrow">BROWSER ASSISTANT · MANIFEST V3</span><h1>三步连接电脑，之后档案自动同步</h1><p>同一套扩展适配 Chromium 内核桌面浏览器。安装后无需再复制 JSON；浏览器助手会生成一次性二维码，由手机授权后自动获取你的主档案。</p></div>
+        <div><span class="eyebrow">BROWSER ASSISTANT · MANIFEST V3</span><h1>安装后直接使用，无需注册账号</h1><p>插件内置本机工作台，可录入档案、优化原 Word 内容、转换图片 PDF 并辅助填表。不需要 ChatGPT 或 GitHub 账号；云端和模型服务为可选功能。</p></div>
         <aside class="detect"><small>已识别当前环境</small><b id="browserName">正在检测…</b><a class="primary" href="/applypilot-browser-assistant.zip" download>下载适配安装包</a></aside>
       </section>
 
@@ -28,10 +28,10 @@
         <h2>跟着页面完成连接</h2>
         <div class="step"><span class="n">1</span><div><b>下载并解压</b><p>点击上方按钮，解压到一个不会被误删的文件夹，例如[文档/简投浏览器助手]。不要直接双击压缩包内文件。</p></div></div>
         <div class="step"><span class="n">2</span><div><b>打开扩展管理页</b><p id="extensionStep">Chrome 输入 chrome://extensions；开启右上角“开发者模式”，点击“加载已解压的扩展程序”，选择解压后的 extension 文件夹。</p></div></div>
-        <div class="step"><span class="n">3</span><div><b>填写简投服务地址</b><p>点击浏览器工具栏中的“简投”图标，填写部署者提供的 HTTPS 服务地址，例如当前站点域名，然后确认浏览器的域名访问授权。</p></div></div>
-        <div class="step"><span class="n">4</span><div><b>手机授权连接</b><p>点击“生成连接二维码”。用手机微信扫码打开[简投设备连接页]，登录后点击“确认连接这台电脑”。</p></div></div>
-        <div class="step"><span class="n">5</span><div><b>打开招聘表单并确认填写</b><p>进入飞书招聘、Moka 或其他申请页，点击“识别当前页面”。确认字段预览后再点“填写”；附件、验证码、声明和最终提交仍由本人完成。</p></div></div>
-        <div class="notice">浏览器安全规则不允许普通网页静默安装扩展。因此“一键安装”的真实含义是：自动识别浏览器、下载正确包、只保留一次浏览器确认。不会伪装成无需授权的静默安装。</div>
+        <div class="step"><span class="n">3</span><div><b>打开本机工作台</b><p>点击插件图标，再点击“无需账号 · 打开本机工作台”。首次使用不需要服务地址或扫码。</p></div></div>
+        <div class="step"><span class="n">4</span><div><b>编辑档案并选择填表版本</b><p>录入真实档案，按需要生成岗位版本，然后点击“用于本机填表”。每次修改档案后重新选择。</p></div></div>
+        <div class="step"><span class="n">5</span><div><b>打开招聘表单并确认填写</b><p>进入申请页，点击插件中的“识别并填写当前页面”，检查绿色标记和缺失提示。附件、验证码、声明和最终提交由本人完成。企业自定义表单可能需要手填。</p></div></div>
+        <div class="notice">这是 ZIP 手动安装流程，需要下载、解压、开启开发者模式并选择文件夹。QQ、夸克尚未真机验证；是否可用取决于具体版本是否允许加载桌面扩展。</div>
       </section>
       <p class="foot">扩展不会读取微信聊天记录，也不会保存招聘网站密码。设备令牌可在[简投工作台 → 在线填表 → 已连接设备]随时撤销。</p>
     </div>

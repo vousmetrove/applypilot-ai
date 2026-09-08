@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#07111f" />
     <meta name="description" content="维护一份覆盖飞书招聘与 Moka 常见字段的主档案，为每个岗位 JD 生成独立重点、独立排序的 ATS 友好简历。" />
     <title>简投 ApplyPilot｜AI 求职投递工作台</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div class="app-shell">
@@ -37,7 +37,7 @@
 
         <div class="privacy-note">
           <span class="privacy-icon" aria-hidden="true">⌁</span>
-          <div><b>登录态私密同步</b><p>档案实时本机保存，并同步到你的私有空间。</p></div>
+          <div><b>本机工作台</b><p>默认无需账号，档案保存在当前浏览器。清除数据或卸载前请导出备份。</p></div>
         </div>
       </aside>
 
@@ -47,7 +47,7 @@
           <div class="save-state"><span class="save-dot"></span><span id="saveLabel">档案已保存</span></div>
           <div class="top-actions">
             <button class="ghost-button" id="loadDemo">载入示例 JD</button>
-            <a class="ghost-button link-button" href="/wechat.html">微信端进度页</a>
+            <a class="ghost-button link-button" href="wechat.html">微信端进度页</a>
             <button class="profile-button" id="openProfile" aria-label="打开主简历档案">
               <span class="avatar">求</span>
               <span><b id="headerName">未命名档案</b><small>编辑主档案</small></span>
@@ -61,7 +61,7 @@
             <div>
               <span class="eyebrow">NEW APPLICATION</span>
               <h1>今天要投哪个岗位？</h1>
-              <p>粘贴完整职位描述。每个 JD 都会建立独立版本：重新选择求职定位、项目顺序、经历重点和 ATS 关键词。</p>
+              <p>粘贴完整职位描述。每个 JD 都会建立独立版本：按岗位关键词排序已有项目、经历原句和技能；不调用外部 AI 服务。</p>
             </div>
             <div class="profile-health" id="profileHealth">
               <span class="health-ring"><b id="profilePercent">76</b><small>%</small></span>
@@ -69,7 +69,25 @@
             </div>
           </div>
 
-          <section class="jd-card">
+          <section class="jd-card local-tools" aria-label="本机工具">
+  <h2>无需注册，从一份真实档案开始</h2>
+  <p>首次使用点击右上角编辑主档案。照片转 PDF、岗位分析和本机填表均不需要 ChatGPT 或 GitHub 账号。</p>
+  <div class="local-actions"><button class="primary-button compact" id="useForFilling">用于本机填表</button><button class="secondary-button" id="exportBackup">导出私人档案备份</button><label class="secondary-button">导入档案 JSON<input id="importBackup" type="file" accept=".json,application/json"></label><button class="secondary-button" id="legacyImport">导入此浏览器旧版档案</button></div>
+  <details><summary>照片 / PDF 转为一份 PDF · 本机处理</summary><p>支持 PNG、JPEG、PDF；按选择顺序合并，总计最多 20 MB、50 页。加密或损坏文件会报错。签名和交互表单不会保留为可验证原件；请另存原件。Office 文档请先在原软件导出 PDF。</p><input id="pdfFiles" type="file" multiple accept=".png,.jpg,.jpeg,.pdf"><button class="secondary-button" id="convertPdf">转换并下载 PDF</button><p id="pdfStatus" role="status"></p></details>
+</section>
+<section class="jd-card local-tools" id="originalFormatSection">
+  <h2>沿用原简历格式，直接改写内容</h2>
+  <p>选择原 DOCX，在下方粘贴目标岗位 JD，再生成逐段优化稿。原文件不会被覆盖。PDF 和图片请先用 Word / WPS 转成 DOCX 并核对版式。</p>
+  <label>原简历（.docx）<input id="originalResume" type="file" accept=".docx"></label>
+  <div id="templateActions" class="hidden">
+    <div class="local-actions"><button class="secondary-button" id="rewriteLocally">生成本机精简稿</button><button class="primary-button compact" id="rewriteWithService">按 JD 深度改写完整内容</button><button class="secondary-button" id="exportOriginalFormat">沿用原格式下载 Word</button></div>
+    <label class="upload-consent"><input id="allowRewriteUpload" type="checkbox">同意将可编辑段落和 JD 发送到部署方配置的内容生成服务；未勾选时只在本机处理。</label>
+    <label>内容生成服务地址（可选，由部署者提供）<input id="rewriteServiceUrl" type="url" placeholder="https://[your-worker].[your-subdomain].workers.dev"></label>
+    <details open><summary>原文与优化稿逐段对照 · 右侧可直接修改</summary><div id="templateParagraphs"></div></details>
+  </div>
+  <p id="templateStatus" role="status">保留原格式的导出不会套用新的单栏模板。文字长度变化可能影响换行和页数。</p>
+</section>
+<section class="jd-card">
             <div class="jd-fields three-fields">
               <label>公司名称<input id="companyInput" type="text" placeholder="例如：某 AI 制药公司" /></label>
               <label>岗位名称<input id="roleInput" type="text" placeholder="例如：AI 产品经理" /></label>
@@ -92,7 +110,7 @@
             <div class="jd-footer">
               <div class="truth-note"><span>✓</span> 只改写真实经历，不自动添加你没有做过的技能</div>
               <button class="primary-button" id="analyzeBtn">
-                <span>分析岗位并生成简历</span><span class="button-arrow">↗</span>
+                <span>用主档案生成新模板简历</span><span class="button-arrow">↗</span>
               </button>
             </div>
           </section>
@@ -101,14 +119,14 @@
             <div class="result-summary">
               <div class="score-card">
                 <div class="score-gauge" id="scoreGauge"><div><strong id="matchScore">0</strong><span>/100</span></div></div>
-                <div><span class="eyebrow">ATS MATCH · <b id="versionLabel">一岗一版</b></span><h2 id="scoreTitle">岗位匹配度</h2><p id="scoreCopy">等待分析</p></div>
+                <div><span class="eyebrow">KEYWORD COVERAGE · <b id="versionLabel">一岗一版</b></span><h2 id="scoreTitle">关键词提及率</h2><p id="scoreCopy">等待分析</p></div>
               </div>
               <div class="summary-divider"></div>
               <div class="summary-metric"><span>已覆盖关键词</span><strong id="coveredCount">0</strong><small id="coveredLabel">—</small></div>
               <div class="summary-metric"><span>建议补强</span><strong id="gapCount">0</strong><small>不会写入虚假能力</small></div>
               <div class="summary-actions">
                 <button class="secondary-button" id="editProfileFromResult">补充经历</button>
-                <button class="primary-button compact" id="exportWord">导出 Word</button>
+                <button class="secondary-button" id="printPdf">打印 / 保存为 PDF</button><button class="primary-button compact" id="exportWord">导出 Word</button>
               </div>
             </div>
 
@@ -169,8 +187,8 @@
                     <span role="listitem"><b>通用表单</b><small>按字段文字智能匹配</small></span>
                   </div>
                   <div class="autofill-actions">
-                    <a class="primary-button link-button" href="/install.html">打开一键安装向导</a>
-                    <a class="secondary-button link-button" href="/applypilot-browser-assistant.zip" download>直接下载安装包</a>
+                    <a class="primary-button link-button" href="install.html">打开一键安装向导</a>
+                    <a class="secondary-button link-button" href="applypilot-browser-assistant.zip" download>直接下载安装包</a>
                     <button class="secondary-button" id="copyProfileJson">复制数据（备用）</button>
                   </div>
                   <div class="install-guide">
@@ -280,7 +298,7 @@
 
           <div class="form-section" id="educationSection">
             <div class="section-heading"><span>03</span><h3>教育背景</h3><em class="source-tag">标准简历字段</em></div>
-            <h4 class="form-subtitle">硕士</h4>
+            <h4 class="form-subtitle">最高学历（本科、硕士、博士等）</h4>
             <div class="field-grid three">
               <label>学校<input data-profile="school" type="text" /></label>
               <label>学历 / 学位<input data-profile="degree" type="text" /></label>
@@ -293,7 +311,7 @@
               <label>成绩 / 排名<input data-profile="masterRank" type="text" placeholder="选填" /></label>
             </div>
             <label>研究方向<textarea data-profile="masterFocus" rows="2" placeholder="例如：肿瘤免疫、药物递送、计算生物学"></textarea></label>
-            <label>硕士主修课程 <small>飞书 / Moka 教育经历中可能单独要求；可用于岗位关键词匹配</small><textarea data-profile="masterCourses" rows="2" placeholder="请按真实成绩单填写，使用逗号分隔"></textarea></label>
+            <label>最高学历主修课程 <small>飞书 / Moka 教育经历中可能单独要求；可用于岗位关键词匹配</small><textarea data-profile="masterCourses" rows="2" placeholder="请按真实成绩单填写，使用逗号分隔"></textarea></label>
             <h4 class="form-subtitle">本科</h4>
             <div class="field-grid three">
               <label>学校<input data-profile="bachelorSchool" type="text" /></label>
@@ -379,7 +397,7 @@
           </div>
 
           <div class="form-section" id="attachmentSection">
-            <div class="section-heading"><span>07</span><h3>证书与申请材料库</h3><em class="source-tag">私有云附件</em></div>
+            <div class="section-heading"><span>07</span><h3>证书与申请材料库</h3><em class="source-tag">云端可选功能</em></div>
             <p class="section-note">支持 PDF、DOC、DOCX、JPG、PNG，单个文件不超过 20 MB。第三方申请页的文件选择必须由你确认，系统会告诉你该上传哪份。</p>
             <div class="attachment-uploader">
               <label>材料类型<select id="attachmentType"><option>学历证明</option><option>学位证明</option><option>成绩单</option><option>语言证书</option><option>资格证书</option><option>作品集</option><option>证件照</option><option>身份证明</option><option>其他材料</option></select></label>
@@ -409,12 +427,14 @@
             <label>利益冲突 / 亲属 / 竞业限制说明<textarea data-profile="complianceNotes" rows="3" placeholder="不同公司问题不同，建议只保存通用事实"></textarea></label>
           </div>
         </div>
-        <footer><span id="profileSaveState">修改会实时保存并同步；点击空白处或按 Esc 不会关闭</span><div><button class="secondary-button" id="resetProfile">清空档案</button><button class="primary-button compact" id="saveProfile">完成编辑</button></div></footer>
+        <footer><span id="profileSaveState">修改会实时保存到当前模式；点击空白处或按 Esc 不会关闭</span><div><button class="secondary-button" id="resetProfile">清空档案</button><button class="primary-button compact" id="saveProfile">完成编辑</button></div></footer>
       </section>
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="/docx.js"></script>
-    <script src="/app.js"></script>
+    <script src="docx.js"></script>
+    <script src="vendor/pdf-lib.min.js"></script>
+    <script type="module" src="app.js"></script>
+    <script type="module" src="template-workbench.mjs"></script>
   </body>
 </html>
