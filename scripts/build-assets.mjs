@@ -1,4 +1,4 @@
-import {copyFile, mkdir, readFile, writeFile, readdir} from 'node:fs/promises';
+import {copyFile, mkdir, readFile, writeFile, readdir, cp} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import {zipSync, unzipSync} from 'fflate';
@@ -7,14 +7,24 @@ const root = fileURLToPath(new URL('..',import.meta.url));
 await mkdir(path.join(root,'public/vendor'),{recursive:true});
 await copyFile(path.join(root,'node_modules/pdf-lib/dist/pdf-lib.min.js'),path.join(root,'public/vendor/pdf-lib.min.js'));
 await copyFile(path.join(root,'node_modules/fflate/esm/browser.js'),path.join(root,'public/vendor/fflate.mjs'));
+for(const [from,to] of [
+  ['pdfjs-dist/build/pdf.mjs','pdf.mjs'],['pdfjs-dist/build/pdf.worker.mjs','pdf.worker.mjs'],
+  ['tesseract.js/dist/tesseract.min.js','tesseract.min.js'],['tesseract.js/dist/worker.min.js','ocr-worker.min.js'],
+  ['tesseract.js-core/tesseract-core-lstm.wasm.js','tesseract-core-lstm.wasm.js'],['tesseract.js-core/tesseract-core-lstm.wasm','tesseract-core-lstm.wasm'],
+  ['pdfjs-dist/LICENSE','pdfjs.LICENSE'],['tesseract.js/LICENSE.md','tesseract.LICENSE'],['tesseract.js-core/LICENSE','tesseract-core.LICENSE']
+]) await copyFile(path.join(root,'node_modules',from),path.join(root,'public/vendor',to));
+for(const dir of ['cmaps','standard_fonts'])await cp(path.join(root,'node_modules/pdfjs-dist',dir),path.join(root,'public/vendor',dir),{recursive:true});
+await mkdir(path.join(root,'public/vendor/ocr-data'),{recursive:true});
+for(const lang of ['eng','chi_sim'])await copyFile(path.join(root,`node_modules/@tesseract.js-data/${lang}/4.0.0_best_int/${lang}.traineddata.gz`),path.join(root,`public/vendor/ocr-data/${lang}.traineddata.gz`));
 const target=path.join(root,'build/extension');
 await mkdir(path.join(target,'vendor'),{recursive:true});
 for(const name of await readdir(path.join(root,'extension'))) {
   await copyFile(path.join(root,'extension',name),path.join(target,name));
 }
-for(const name of ['workspace.html','app.js','docx.js','styles.css','profile-core.mjs','pdf-tools.mjs','docx-template.mjs','template-workbench.mjs','resume-rewrite.mjs','install.html','wechat.html']) {
+for(const name of ['workspace.html','app.js','docx.js','styles.css','profile-core.mjs','pdf-tools.mjs','docx-template.mjs','template-workbench.mjs','resume-rewrite.mjs','resume-import-core.mjs','document-input.mjs','intake-workbench.mjs','install.html','wechat.html']) {
   await copyFile(path.join(root,'public',name),path.join(target,name));
 }
+await cp(path.join(root,'public/vendor'),path.join(target,'vendor'),{recursive:true});
 await copyFile(path.join(root,'public/vendor/pdf-lib.min.js'),path.join(target,'vendor/pdf-lib.min.js'));
 await copyFile(path.join(root,'public/vendor/fflate.mjs'),path.join(target,'vendor/fflate.mjs'));
 for(const name of ['pdf-lib','fflate']) {

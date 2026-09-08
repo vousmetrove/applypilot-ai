@@ -71,7 +71,15 @@
 
           <section class="jd-card local-tools" aria-label="本机工具">
   <h2>无需注册，从一份真实档案开始</h2>
-  <p>首次使用点击右上角编辑主档案。照片转 PDF、岗位分析和本机填表均不需要 ChatGPT 或 GitHub 账号。</p>
+  <p>上传 PDF 或 Word 简历，自动提取主档案；核对后保存。文字识别在本机进行，无需账号或 API Key。支持 DOCX、文本 PDF 和最多 5 页扫描 PDF；旧 DOC 请先另存为 DOCX。</p>
+  <label class="secondary-button">上传简历并识别主档案<input id="resumeIntake" type="file" accept=".docx,.pdf"></label>
+  <p id="intakeStatus" role="status"></p>
+  <div id="intakeReview" class="hidden">
+    <h3>核对识别结果后写入主档案</h3><p>每项附原文依据。已有字段默认不覆盖；勾选后将用识别值替换。未识别字段可随后在主档案补充。</p>
+    <div id="intakeFields"></div>
+    <details><summary>未归类内容与完整识别文字</summary><p id="intakeUnmapped"></p><label>可纠正识别文字后重新解析<textarea id="intakeText" rows="12"></textarea></label><button id="reparseIntake" class="secondary-button">重新解析字段</button></details>
+    <button id="applyIntake" class="primary-button compact">确认所选字段，写入主档案</button>
+  </div>
   <div class="local-actions"><button class="primary-button compact" id="useForFilling">用于本机填表</button><button class="secondary-button" id="exportBackup">导出私人档案备份</button><label class="secondary-button">导入档案 JSON<input id="importBackup" type="file" accept=".json,application/json"></label><button class="secondary-button" id="legacyImport">导入此浏览器旧版档案</button></div>
   <details><summary>照片 / PDF 转为一份 PDF · 本机处理</summary><p>支持 PNG、JPEG、PDF；按选择顺序合并，总计最多 20 MB、50 页。加密或损坏文件会报错。签名和交互表单不会保留为可验证原件；请另存原件。Office 文档请先在原软件导出 PDF。</p><input id="pdfFiles" type="file" multiple accept=".png,.jpg,.jpeg,.pdf"><button class="secondary-button" id="convertPdf">转换并下载 PDF</button><p id="pdfStatus" role="status"></p></details>
 </section>
@@ -108,6 +116,8 @@
               <span id="jdCount">0 字</span>
             </label>
             <textarea id="jdInput" rows="7" placeholder="在这里粘贴职位描述……\n\n建议包含：岗位职责、任职要求、加分项。内容越完整，关键词覆盖和简历改写越准确。"></textarea>
+            <label class="secondary-button">从图片识别 JD<input id="jdImage" type="file" accept=".png,.jpg,.jpeg"></label><p id="jdImageStatus" role="status"></p>
+            <div id="jdImageReview" class="hidden"><label>核对图片识别文字<textarea id="jdImageText" rows="8"></textarea></label><button id="applyJdImage" class="secondary-button">用核对后的文字替换 JD</button></div>
             <div class="jd-footer">
               <div class="truth-note"><span>✓</span> 只改写真实经历，不自动添加你没有做过的技能</div>
               <button class="primary-button" id="analyzeBtn">
@@ -117,6 +127,7 @@
           </section>
 
           <section class="results hidden" id="results" aria-live="polite">
+            <section class="jd-card"><h3>按当前 JD 深度优化岗位版</h3><p>将主档案中的已有经历改写为当前岗位版正文，保留主档案原文。生成后核对正文并导出 Word。服务由部署方提供。</p><label><input id="allowProfileRewrite" type="checkbox">同意将主档案中的简历内容发送至内容生成服务</label><button id="rewriteProfileVersion" class="secondary-button">深度改写当前岗位版</button><button id="restoreProfileVersion" class="secondary-button">恢复本机生成版本</button><p id="profileRewriteStatus" role="status"></p></section>
             <div class="result-summary">
               <div class="score-card">
                 <div class="score-gauge" id="scoreGauge"><div><strong id="matchScore">0</strong><span>/100</span></div></div>
@@ -436,6 +447,7 @@
     <script src="docx.js"></script>
     <script src="vendor/pdf-lib.min.js"></script>
     <script type="module" src="app.js"></script>
-    <script type="module" src="template-workbench.mjs"></script>
+      <script type="module" src="template-workbench.mjs"></script>
+      <script type="module" src="intake-workbench.mjs"></script>
   </body>
 </html>

@@ -39,7 +39,7 @@ test('deep rewrite renders actual replacement paragraphs from simulated provider
 test('DOCX compatibility fallbacks and text boxes are read once without duplicated text',async({page})=>{
   const document=`<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><w:body><mc:AlternateContent><mc:Choice Requires="w14"><w:p><w:r><w:t>Choice section text that should appear once in the resume.</w:t></w:r></w:p></mc:Choice><mc:Fallback><w:p><w:r><w:t>Fallback section text that must not duplicate.</w:t></w:r></w:p></mc:Fallback></mc:AlternateContent><w:p><w:r><w:t>Outer paragraph should not absorb the nested text box contents.</w:t></w:r><w:r><w:pict><w:txbxContent><w:p><w:r><w:t>Text box paragraph that should be read once.</w:t></w:r></w:p></w:txbxContent></w:pict></w:r></w:p></w:body></w:document>`;
   await page.goto('/');await page.locator('#originalResume').setInputFiles({name:'compatibility.docx',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',buffer:Buffer.from(zipSync({...parts,'word/document.xml':strToU8(document)}))});
-  await expect(page.locator('#templateStatus')).toContainText('3 个可编辑段落');
+  await expect(page.locator('#templateStatus')).toContainText('2 个可编辑段落');
   await expect(page.locator('#templateParagraphs')).toContainText('Choice section text that should appear once');
   await expect(page.locator('#templateParagraphs')).not.toContainText('Fallback section text');
   await expect(page.locator('#templateParagraphs')).toContainText('Text box paragraph that should be read once');

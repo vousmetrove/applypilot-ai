@@ -84,5 +84,9 @@ test('packaged extension loads offline workbench and shares the chosen profile w
     const payload=await sw.evaluate(async()=> (await chrome.storage.local.get('applypilotPayload')).applypilotPayload);
     expect(payload.profile.targetRole).toBe('交互设计师');expect(payload.consent.autoSubmit).toBe(false);expect(errors).toEqual([]);
     await editProfile(page,{summary:'修改后必须重新选择版本。'});await expect(popup.locator('#fillBtn')).toBeDisabled();
+    const recognized=await page.evaluate(async()=>{
+      const canvas=document.createElement('canvas');canvas.width=1000;canvas.height=220;const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,1000,220);ctx.fillStyle='black';ctx.font='36px Arial';ctx.fillText('Procurement supplier orders',20,80);ctx.fillText('Office documentation support',20,140);
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve));const {readDocument}=await import('./document-input.mjs');return (await readDocument(new File([blob],'jd.png',{type:'image/png'}))).text;
+    });expect(recognized).toMatch(/Procurement/i);
   } finally {await context.close();}
 });

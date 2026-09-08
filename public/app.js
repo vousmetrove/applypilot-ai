@@ -1,6 +1,6 @@
 import {PROFILE_FIELDS, cleanProfile, createPayload, educationEntries, evidenceText, truthfulSummary, keywordCoverage, nextVersion} from './profile-core.mjs';
 import {convertToPdf, PDF_LIMITS} from './pdf-tools.mjs';
-import {rewriteParagraph} from './resume-rewrite.mjs';
+import {rewriteParagraph,validateRewrite} from './resume-rewrite.mjs';
 const CLOUD_MODE = location.protocol !== 'chrome-extension:' && new URLSearchParams(location.search).get('mode') === 'cloud';
 const profileStore = CLOUD_MODE ? sessionStorage : localStorage;
 const storageKey = key => key.replace('applypilot-', CLOUD_MODE ? 'applypilot-cloud-' : 'applypilot-guest-');
@@ -28,6 +28,7 @@ const DEMO_JD = `AI 医药产品经理（应届/校招）
 4. 掌握 Python、SQL 或数据分析工具者优先；有单细胞、多组学、靶点发现经验者加分。`;
 
 const KEYWORD_ALIASES = {
+  "采购": ["采购","procurement","purchasing"], "供应商沟通":["供应商","supplier"], "订单跟进":["订单","purchase order"], "入库核对":["入库","到货","库存","inventory"], "GMP":["gmp"], "流程规范":["流程规范","记录完整","可追溯"],
   "AI产品": ["ai产品", "ai 产品", "人工智能产品"], "产品经理": ["产品经理", "产品设计"],
   "需求分析": ["需求分析", "需求拆解"], "用户研究": ["用户访谈", "用户研究", "用户需求"],
   "竞品分析": ["竞品分析", "竞品调研"], "PRD": ["prd", "产品需求文档"], "原型设计": ["原型", "axure", "figma"],
@@ -105,6 +106,41 @@ function saveProfileData() {
   }
 }
 
+window.ApplyPilotIntake={
+  getProfile:()=>({...profile}),
+  apply:fields=>{
+    if(!cloudReady)throw new Error('正在读取档案，请稍后再试');
+    const previous=profile;profile={...profile,...cleanProfile(fields,{includeSensitive:true})};
+    if(!saveProfileData()){profile=previous;throw new Error('保存失败，未应用导入结果');}
+    invalidateResult();openProfile();
+  }
+};
+
+$('#rewriteProfileVersion').addEventListener('click',async()=>{
+  const result=currentResult,button=$('#rewriteProfileVersion'),status=$('#profileRewriteStatus');
+  if(!result){status.textContent='请先导入并核对主档案、填写 JD，再生成岗位版';return;}
+  if(!$('#allowProfileRewrite').checked){status.textContent='请先同意发送简历内容';return;}
+  button.disabled=true;const source=JSON.stringify(profile);
+  try {
+    const keys=['summary','experience1Description','experience2Description','internshipDescription','project1','project2','skills','english','tools','otherExperience'].filter(k=>profile[k]?.trim());
+    if(!keys.length)throw Error('主档案中还没有可改写的经历，请先补充');
+    const paragraphs=keys.map((key,id)=>({id,original:profile[key]}));
+    const context=[...paragraphs,...['school','major','degree','experience1Role','experience2Role','internshipRole','project1Title','project2Title'].filter(k=>profile[k]).map((k,i)=>({id:100+i,original:`${k}: ${profile[k]}`}))];
+    let base='';const configured=$('#rewriteServiceUrl').value.trim();
+    if(configured){const url=new URL(configured);if(url.protocol!=='https:')throw Error('生成服务必须使用 HTTPS');base=url.origin;if(location.protocol==='chrome-extension:'&&!(await chrome.permissions.request({origins:[`${url.protocol}//${url.hostname}/*`]})))throw Error('未授权访问生成服务');}
+    else if(location.protocol==='chrome-extension:')throw Error('插件中请填写部署方提供的生成服务地址，或使用网站的生成服务');
+    status.textContent='正在生成实际替换内容…';
+    const response=await fetch(`${base}/api/resume/rewrite`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({schema:'applypilot-rewrite-v1',jd:result.jd,paragraphs,context}),signal:AbortSignal.timeout(55000)});
+    const data=await response.json();if(!response.ok)throw Error(data.error||'生成失败');
+    if(currentResult!==result||JSON.stringify(profile)!==source)throw Error('档案或岗位已变化，生成结果未覆盖当前内容');
+    if(!Array.isArray(data.paragraphs)||data.paragraphs.length!==keys.length)throw Error('服务返回的段落不完整');
+    const next={},ids=new Set();for(const p of data.paragraphs){if(!Number.isInteger(p.id)||!keys[p.id]||ids.has(p.id))throw Error('服务返回段落编号错误');ids.add(p.id);next[keys[p.id]]=validateRewrite(profile[keys[p.id]],p.optimized);}
+    if(keys.every(k=>next[k]===profile[k]))throw Error('没有生成实际修改');
+    result.rewrittenFields=next;renderResult();saveApplicationVersion(result);await persistApplication(result);status.textContent='岗位版正文已更新。主档案保持原文，请核对后导出 Word。';switchTab('resume');
+  }catch(error){status.textContent=error.message;}finally{button.disabled=false;}
+});
+$('#restoreProfileVersion').addEventListener('click',()=>{if(currentResult){delete currentResult.rewrittenFields;renderResult();saveApplicationVersion(currentResult);persistApplication(currentResult);$('#profileRewriteStatus').textContent='已恢复本机生成版本';}});
+
 async function apiJson(url, options = {}) {
   if (!CLOUD_MODE) throw new Error("当前为本机模式；云端功能需要单独部署和登录");
   const response = await fetch(url, options);
@@ -158,7 +194,6 @@ async function hydrateCloudData() {
 
 function getProfileText() { return evidenceText(profile); }
 
-function splitSkills() { return String(profile.skills || "").split(/[，,、]/).map(x => x.trim()).filter(Boolean); }
 function hasTerm(text, term) { return (KEYWORD_ALIASES[term] || [term]).some(alias => normalize(text).includes(normalize(alias))); }
 
 function profileCompleteness() {
@@ -215,6 +250,7 @@ function detectTrack(jd, override = "auto") {
   if (override !== "auto" && TRACKS[override]) return override;
   const text = normalize(jd);
   const firstLine = text.split("\n").map(line => line.trim()).find(Boolean) || "";
+  if(/采购|供应链|procurement|purchasing/.test(firstLine))return 'operations';
   if (/应用科学|application scientist|解决方案|售前|技术支持/.test(firstLine)) return "solutions";
   if (/产品经理|产品运营|product manager/.test(firstLine)) return "product";
   if (/生物信息|计算生物|bioinformatic|computational/.test(firstLine)) return "computational";
@@ -328,7 +364,9 @@ function buildRecommendations(result) {
   return tips.slice(0,3);
 }
 
+function resumeProfile(result) {return {...profile,...(result?.rewrittenFields||{})};}
 function projectEntries(result) {
+  const profile=resumeProfile(result);
   const entries = [
     {title:profile.project1Title, role:profile.project1Role, dates:profile.project1Dates, description:profile.project1, tags:profile.project1Tags},
     {title:profile.project2Title, role:profile.project2Role, dates:profile.project2Dates, description:profile.project2, tags:profile.project2Tags}
@@ -340,6 +378,7 @@ function projectEntries(result) {
 }
 
 function experienceEntries(result) {
+  const profile=resumeProfile(result);
   const entries = [
     {org:profile.experience1Org, role:profile.experience1Role, department:profile.experience1Department, start:profile.experience1Start, end:profile.experience1End, description:profile.experience1Description},
     {org:profile.experience2Org, role:profile.experience2Role, department:profile.experience2Department, start:profile.experience2Start, end:profile.experience2End, description:profile.experience2Description},
@@ -366,16 +405,17 @@ function buildExperienceSection(result) {
 }
 
 function rankSkills(result) {
-  return splitSkills().sort((a,b) => {
+  return String(resumeProfile(result).skills||'').split(/[，,、\n]/).map(s=>s.trim()).filter(Boolean).sort((a,b) => {
     const aScore = hasTerm(result.jd, a) ? 2 : TRACKS[result.track].focus.some(term => hasTerm(a, term)) ? 1 : 0;
     const bScore = hasTerm(result.jd, b) ? 2 : TRACKS[result.track].focus.some(term => hasTerm(b, term)) ? 1 : 0;
     return bScore - aScore;
   });
 }
 
-function tailoredSummary(result) { return rewriteParagraph(truthfulSummary(profile, result.keywords),result.jd); }
+function tailoredSummary(result) { return result.rewrittenFields?.summary || rewriteParagraph(truthfulSummary(profile, result.keywords),result.jd); }
 
 function buildResumeHTML(result) {
+  const profile=resumeProfile(result);
   const contact = [profile.phone, profile.email, profile.city, profile.portfolio].filter(Boolean).map(escapeHtml).join("<br>") || "请在主档案补充联系方式";
 
   const skills = rankSkills(result).slice(0,16);
@@ -387,6 +427,7 @@ function buildResumeHTML(result) {
     <section class="resume-section"><h3>岗位摘要</h3><p>${escapeHtml(tailoredSummary(result))}</p></section>
     ${educationEntries(profile).length ? `<section class="resume-section"><h3>教育背景</h3>${educationEntries(profile).map(item => `<div class="resume-row"><header><b>${escapeHtml([item.school,item.major,item.degree].filter(Boolean).join(" · "))}</b><span>${escapeHtml([item.start,item.end].filter(Boolean).join(" – "))}</span></header><p>${escapeHtml([item.gpa,item.rank,item.studyType,item.courses].filter(Boolean).join(" ｜ "))}</p></div>`).join("")}</section>` : ""}
     ${mainSections}
+    ${profile.otherExperience?`<section class="resume-section"><h3>校园经历与补充经历</h3><p style="white-space:pre-wrap">${escapeHtml(profile.otherExperience)}</p></section>`:''}
     <section class="resume-section"><h3>技能与成果</h3><div class="skill-line"><b>专业技能</b><span>${escapeHtml(skills.join("、"))}</span></div><div class="skill-line"><b>语言工具</b><span>${escapeHtml([profile.english,profile.tools].filter(Boolean).join("；"))}</span></div>${profile.publications ? `<div class="skill-line"><b>研究成果</b><span>${escapeHtml(profile.publications)}</span></div>` : ""}</section>
   `;
 }
@@ -479,6 +520,7 @@ function buildStructuredOutput(result) {
 }
 
 function buildDocxPayload(result) {
+  const profile=resumeProfile(result);
   return {
     title:`${result.company} ${result.role} 定向简历`, name:profile.name || "候选人",
     subtitle:`应聘：${result.role}`,
@@ -487,7 +529,7 @@ function buildDocxPayload(result) {
     education:educationEntries(profile).map(item => ({title:[item.school,item.major,item.degree].filter(Boolean).join(" · "),dates:[item.start,item.end].filter(Boolean).join(" – "),detail:[item.gpa,item.rank,item.courses].filter(Boolean).join(" ｜ ")})),
     experience:experienceEntries(result).filter(item => item.description).map(item => ({title:`${item.org} · ${item.role}`, dates:[item.start,item.end].filter(Boolean).join(" – "), detail:item.department, bullets:sentenceBullets(item.description,result)})),
     projects:projectEntries(result).map(item => ({title:item.title, dates:[item.role,item.dates].filter(Boolean).join(" ｜ "), bullets:sentenceBullets(item.description,result)})),
-    skills:[{label:"专业技能",value:rankSkills(result).slice(0,18).join("、")},{label:"语言工具",value:[profile.english,profile.tools].filter(Boolean).join("；")},{label:"研究成果",value:profile.publications}],
+    skills:[{label:"专业技能",value:rankSkills(result).slice(0,18).join("、")},{label:"语言工具",value:[profile.english,profile.tools].filter(Boolean).join("；")},{label:"研究成果",value:profile.publications},{label:"校园经历与补充经历",value:profile.otherExperience}],
     attachments:[],
   };
 }

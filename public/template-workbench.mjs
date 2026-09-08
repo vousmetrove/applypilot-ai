@@ -3,6 +3,7 @@ import {rewriteParagraph,validateRewrite,createRewriteRequest} from './resume-re
 const $=s=>document.querySelector(s);
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let template=null,fileName='',generation=0;
+document.addEventListener('applypilot-template-loaded',e=>{template=e.detail.template;fileName=e.detail.name;generation++;render();status('已复用上传的 Word 原件，可直接按 JD 改写并沿用原格式导出。');});
 const status=text=>{$('#templateStatus').textContent=text;};
 function review() {
   const paragraphs=template?.paragraphs || [];
