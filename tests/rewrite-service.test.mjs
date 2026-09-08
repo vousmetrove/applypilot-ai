@@ -1,11 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {rewriteParagraph,validateRewrite} from '../public/resume-rewrite.mjs';
+import {rewriteParagraph,validateRewrite,createRewriteRequest} from '../public/resume-rewrite.mjs';
 import {validateRequest,validateResponse,generateRewrite} from '../lib/rewrite-service.mjs';
 const original='我主要负责的是整理会议材料，还会跟进老师交办的事情，协助完成 3 次活动。';
 const jd='项目运营岗位：需要整理会议材料、协调工作进度并跟进项目执行。要求具备细致的文档整理能力和团队沟通能力。';
 test('local rewrite produces a concrete replacement without manufacturing results',()=>{
   const output=rewriteParagraph(original,jd);assert.notEqual(output,original);assert.match(output,/文档整理：负责整理会议材料；跟进教师交办事项/);assert.match(output,/协助完成 3 次活动/);assert.equal(validateRewrite(original,output),output);
+});
+
+test('full-document context retains section headings and validates source consistency',()=>{
+  const request=createRewriteRequest([{id:0,original:'Summary',editable:false},{id:1,original,editable:true}],jd);
+  assert.equal(request.context[0].original,'Summary');assert.equal(request.paragraphs.length,1);validateRequest(request);
+  assert.throws(()=>validateRequest({...request,context:[{id:1,original:'different evidence'}]}),/不一致/);
+  assert.throws(()=>validateRequest({...request,context:[{id:1,original},{id:1,original}]}),/无效/);
+});
+
+test('English rewrite rejects unsupported safety credentials and inflated ownership',()=>{
+  const text='Assisted with meeting documentation and procurement follow-up.';
+  assert.throws(()=>validateRewrite(text,'Led meeting documentation and procurement follow-up.'),/限定/);
+  assert.throws(()=>validateRewrite(text,'Assisted with SHE documentation and procurement follow-up.'),/SHE/);
+  assert.throws(()=>validateRewrite(text,'You should rewrite the meeting experience.'),/正文/);
+  assert.equal(validateRewrite(text,'Assisted with procurement follow-up and meeting documentation.'),'Assisted with procurement follow-up and meeting documentation.');
+});
+
+test('unchanged model output is not reported as an optimized resume',()=>{
+  assert.throws(()=>validateResponse({paragraphs:[{id:1,original}]},{paragraphs:[{id:1,optimized:original}]}),/未生成实际/);
 });
 test('guard rejects changed numbers and responsibility inflation',()=>{
   assert.throws(()=>validateRewrite(original,'主导完成 30 次活动。'),/数字/);

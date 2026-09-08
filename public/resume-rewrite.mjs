@@ -19,11 +19,12 @@ export function rewriteParagraph(source,jd='') {
     .replace(/老师交办的事情/g,'教师交办事项')
     .replace(/[，,；;]\s*[；;]/g,'；').replace(/^[；;\s]+|[；;\s]+$/g,'');
   const category=CATEGORIES.find(c=>c.source.test(source)&&c.jd.test(jd));
-  if(category && !/^[^：:]{1,16}[：:]/.test(text)) text=`${category.label}：${text}`;
+  if(category && /[\u4e00-\u9fff]/.test(source) && !/^[^：:]{1,16}[：:]/.test(text)) text=`${category.label}：${text}`;
   return text;
 }
 export function validateRewrite(source,optimized) {
   if(typeof optimized !== 'string' || !optimized.trim()) throw new Error('优化段落不能为空');
+  if(/(?:建议你|建议将|可以改为|推荐写成|you should|consider rewriting|suggest(?:ed)? revision)[:：\s]/i.test(optimized)) throw new Error('请返回可直接使用的简历正文，不要返回改写建议');
   if(optimized.length > Math.max(source.length*2,source.length+80)) throw new Error('优化内容过长，请压缩到接近原文长度');
   const facts=source.match(/\d+(?:[.,/-]\d+)*(?:%|％)?/g)||[];
   const nextFacts=optimized.match(/\d+(?:[.,/-]\d+)*(?:%|％)?/g)||[];
@@ -32,8 +33,14 @@ export function validateRewrite(source,optimized) {
   for(const word of qualifications) if(source.includes(word)&&!optimized.includes(word)) throw new Error(`请保留原文中的“${word}”，避免夸大职责或熟练度`);
   const stronger=['主导','独立负责','精通','专家','显著提升','大幅提升'];
   for(const word of stronger) if(!source.includes(word)&&optimized.includes(word)) throw new Error(`新增了“${word}”，需要原始事实支持`);
+  const englishLimits=[/\bassisted\b/i,/\bsupported\b/i,/\bbasic\b/i,/\bfamiliar with\b/i,/\bexposure to\b/i];
+  for(const re of englishLimits) if(re.test(source)&&!re.test(optimized)) throw new Error('请保留原英文职责或熟练程度限定词');
+  for(const word of ['led','spearheaded','expert','certified','SHE','EHS']) {
+    const re=new RegExp(`\\b${word}\\b`,'i');
+    if(!re.test(source)&&re.test(optimized)) throw new Error(`新增了“${word}”，需要原始事实支持`);
+  }
   return optimized.trim();
 }
 export function createRewriteRequest(paragraphs,jd) {
-  return {schema:'applypilot-rewrite-v1',jd,paragraphs:paragraphs.filter(p=>p.editable).map(p=>({id:p.id,original:p.original}))};
+  return {schema:'applypilot-rewrite-v1',jd,context:paragraphs.filter(p=>p.original.trim()).map(p=>({id:p.id,original:p.original})),paragraphs:paragraphs.filter(p=>p.editable).map(p=>({id:p.id,original:p.original}))};
 }

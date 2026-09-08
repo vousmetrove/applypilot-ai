@@ -29,6 +29,27 @@ test('deep rewrite renders actual replacement paragraphs from simulated provider
   await page.route('**/api/resume/rewrite',async route=>{request=route.request().postDataJSON();await route.fulfill({json:{paragraphs:[{id:1,optimized:'协助完成 3 次活动，整理会议材料并跟进教师交办事项。'}]}});});
   await page.locator('#allowRewriteUpload').check();await page.locator('#rewriteWithService').click();await expect(page.locator('[data-rewrite]')).toHaveValue('协助完成 3 次活动，整理会议材料并跟进教师交办事项。');
   expect(request.paragraphs[0].original).toBe(original);await expect(page.locator('#templateStatus')).toContainText('完整段落优化稿已生成');
+  expect(request.context[0].original).toBe('模拟候选人');
+  await expect(page.locator('#templateFullPreview')).toContainText('协助完成 3 次活动');
+  await expect(page.locator('#templateReview')).toContainText('已修改 1 段');
+  await page.locator('[data-restore="1"]').click();await expect(page.locator('[data-rewrite]')).toHaveValue(original);
+  await expect(page.locator('#templateReview')).toContainText('已修改 0 段');
+});
+
+test('English career-transition draft exports actual text and preserves historical role',async({page})=>{
+  const content=['SIMULATED CANDIDATE','Summary','Seeking a Research Assistant position with experience in meeting documentation and procurement follow-up.','Experience','Research Assistant | Example University','Assisted with meeting documentation and procurement follow-up.','Skills','Basic Excel and document management.'];
+  const document=`<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${content.map(s=>`<w:p><w:r><w:t>${s}</w:t></w:r></w:p>`).join('')}</w:body></w:document>`;
+  await page.goto('/');await page.locator('#originalResume').setInputFiles({name:'synthetic-english.docx',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',buffer:Buffer.from(zipSync({...parts,'word/document.xml':strToU8(document)}))});
+  await page.locator('#jdInput').fill('Office Coordinator: maintain meeting records, coordinate procurement follow-up and manage office documents.');
+  await page.route('**/api/resume/rewrite',route=>{
+    const request=route.request().postDataJSON();
+    return route.fulfill({json:{paragraphs:request.paragraphs.map(p=>({id:p.id,optimized:p.id===2?'Seeking an Office Coordinator position, bringing experience in meeting documentation and procurement follow-up.':p.id===5?'Assisted with procurement follow-up and maintained meeting documentation.':p.original}))}});
+  });
+  await page.locator('#allowRewriteUpload').check();await page.locator('#rewriteWithService').click();
+  await expect(page.locator('#templateStatus')).toContainText('完整段落优化稿已生成');
+  const event=page.waitForEvent('download');await page.locator('#exportOriginalFormat').click();const downloaded=await event;
+  const out=unzipSync(new Uint8Array(await readFile(await downloaded.path())));const body=strFromU8(out['word/document.xml']);
+  expect(body).toContain('Seeking an Office Coordinator position');expect(body).toContain('Research Assistant | Example University');expect(body).toContain('Assisted with procurement follow-up');expect(body).not.toContain('SHE');
 });
 test('wrong format and unavailable provider never pretend to produce an optimized resume',async({page})=>{
   await upload(page);await page.locator('#originalResume').setInputFiles({name:'resume.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-')});await expect(page.locator('#templateStatus')).toContainText('需要 .docx');

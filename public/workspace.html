@@ -81,9 +81,10 @@
   <label>原简历（.docx）<input id="originalResume" type="file" accept=".docx"></label>
   <div id="templateActions" class="hidden">
     <div class="local-actions"><button class="secondary-button" id="rewriteLocally">生成本机精简稿</button><button class="primary-button compact" id="rewriteWithService">按 JD 深度改写完整内容</button><button class="secondary-button" id="exportOriginalFormat">沿用原格式下载 Word</button></div>
-    <label class="upload-consent"><input id="allowRewriteUpload" type="checkbox">同意将可编辑段落和 JD 发送到部署方配置的内容生成服务；未勾选时只在本机处理。</label>
+    <label class="upload-consent"><input id="allowRewriteUpload" type="checkbox">同意将简历全文（包括个人信息）和 JD 发送到部署方配置的内容生成服务，用于整体岗位定位；未勾选时只在本机处理。原文件的图片不会上传。</label>
     <label>内容生成服务地址（可选，由部署者提供）<input id="rewriteServiceUrl" type="url" placeholder="https://[your-worker].[your-subdomain].workers.dev"></label>
     <details open><summary>原文与优化稿逐段对照 · 右侧可直接修改</summary><div id="templateParagraphs"></div></details>
+    <details><summary>查看完整简历正文与导出检查</summary><p id="templateReview" role="status"></p><div id="templateFullPreview" style="white-space:pre-wrap;overflow-wrap:anywhere"></div><p>这里是正文核对视图，实际 Word 沿用上传文件的格式。下载后请在 Word / WPS 检查分页。</p></details>
   </div>
   <p id="templateStatus" role="status">保留原格式的导出不会套用新的单栏模板。文字长度变化可能影响换行和页数。</p>
 </section>
