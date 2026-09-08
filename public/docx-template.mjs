@@ -1,5 +1,34 @@
 import {unzipSync,zipSync,strFromU8,strToU8} from './vendor/fflate.mjs';
 const W='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const MC='http://schemas.openxmlformats.org/markup-compatibility/2006';
+function chooseAlternateContent(doc) {
+  // Word stores the same visual content in mc:Choice and mc:Fallback. Keep
+  // one representation before reading paragraphs so fallback text is never
+  // treated as a second resume section.
+  for(const alternate of [...doc.getElementsByTagNameNS(MC,'AlternateContent')]) {
+    const choice=alternate.getElementsByTagNameNS(MC,'Choice')[0];
+    const fallback=alternate.getElementsByTagNameNS(MC,'Fallback')[0];
+    const selected=choice || fallback;
+    if(!selected) { alternate.remove(); continue; }
+    const parent=alternate.parentNode;
+    if(!parent) continue;
+    for(const child of [...selected.childNodes]) parent.insertBefore(child.cloneNode(true),alternate);
+    alternate.remove();
+  }
+}
+function directTextNodes(paragraph) {
+  const texts=[];
+  const walk=node=>{
+    for(const child of node.childNodes) {
+      if(child.nodeType!==1) continue;
+      if(child.namespaceURI===W && child.localName==='p') continue;
+      if(child.namespaceURI===W && child.localName==='t') texts.push(child);
+      else walk(child);
+    }
+  };
+  walk(paragraph);
+  return texts;
+}
 export function readTemplate(bytes) {
   if(bytes.byteLength > 20*1024*1024) throw new Error('原 Word 文件不能超过 20 MB');
   let expanded=0,count=0;
@@ -14,8 +43,9 @@ export function readTemplate(bytes) {
   if(/<!DOCTYPE|<!ENTITY/i.test(xml)) throw new Error('不支持含外部实体的文档');
   const doc=new DOMParser().parseFromString(xml,'application/xml');
   if(doc.querySelector('parsererror')) throw new Error('Word 文档结构损坏');
+  chooseAlternateContent(doc);
   const paragraphs=[...doc.getElementsByTagNameNS(W,'p')].map((node,id)=>{
-    const texts=[...node.getElementsByTagNameNS(W,'t')];
+    const texts=directTextNodes(node);
     const original=texts.map(t=>t.textContent).join('');
     const protectedTags=['drawing','object','fldChar','instrText','tab','br','del','ins','sdt'];
     const protectedContent=protectedTags.some(tag=>node.getElementsByTagNameNS(W,tag).length);
