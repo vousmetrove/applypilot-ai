@@ -74,8 +74,11 @@ test('packaged extension loads offline workbench and shares the chosen profile w
   const context=await chromium.launchPersistentContext('',{channel:process.platform==='win32'?'msedge':'chromium',headless:true,args:[`--disable-extensions-except=${extensionPath}`,`--load-extension=${extensionPath}`]});
   try {
     const sw=context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');const id=new URL(sw.url()).host;
-    const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
-    await page.goto(`chrome-extension://${id}/workspace.html`);await editProfile(page);await analyze(page);await page.locator('#useForFilling').click();
+    // Observe the real install-triggered options page instead of racing openOptionsPage.
+    const workspaceUrl=`chrome-extension://${id}/workspace.html`;
+    await expect.poll(()=>context.pages().some(p=>p.url()===workspaceUrl)).toBe(true);
+    const page=context.pages().find(p=>p.url()===workspaceUrl);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+    await page.waitForLoadState();await editProfile(page);await analyze(page);await page.locator('#useForFilling').click();
     await expect(page.locator('#toast')).toContainText('已选为填表档案');
     const popup=await context.newPage();await popup.goto(`chrome-extension://${id}/popup.html`);await expect(popup.locator('#profileName')).toHaveText(profile.name);await expect(popup.locator('#fillBtn')).toBeEnabled();
     const payload=await sw.evaluate(async()=> (await chrome.storage.local.get('applypilotPayload')).applypilotPayload);
