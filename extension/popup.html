@@ -5,6 +5,7 @@
     <header><span class="logo">简</span><div><b>简投浏览器助手</b><small id="platform">正在识别当前页面…</small></div></header>
     <main>
       <button class="primary" id="openWorkbench">无需账号 · 打开本机工作台</button>
+      <button class="secondary" id="captureJD">用选中 JD 优化简历</button>
       <p>填写主档案后点“用于本机填表”，再返回申请页。</p>
       <details><summary>可选：连接云端服务</summary>
       <section class="config-box" id="backendSetup">
@@ -27,6 +28,9 @@
       </section>
       <section class="remote hidden" id="remoteBox"><b>手机发来的待办任务</b><div id="remoteList"></div></section>
       <button class="primary" id="fillBtn" disabled>识别并填写当前页面 <span>↗</span></button>
+      <button class="secondary" id="previewBtn">预览可填写字段</button>
+      <div id="fieldPreview" aria-live="polite"></div>
+      <button class="secondary" id="undoBtn">撤销上一次填写</button>
       <div class="result hidden" id="result"></div>
       <details><summary>导入档案 / 岗位 JSON</summary><div class="details-body"><input id="importFile" type="file" accept=".json,application/json"><textarea id="replaceJson" rows="4" placeholder="粘贴从简投工作台复制的填表数据或结构化 JSON"></textarea><button class="secondary" id="replaceBtn">仅保存到本机</button></div></details>
       <button class="link" id="changeBackendBtn">更换简投服务地址</button>

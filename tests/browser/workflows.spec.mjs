@@ -63,6 +63,12 @@ test('content script fills simulated fields, protects manual edits, never submit
   for(const id of ['state','idNumber','ssn','captcha','attachment']) await expect(page.locator('#'+id)).toHaveValue('');
   await expect(page.locator('#prefilled')).toHaveValue('已由用户填写');await page.locator('#name').fill('手动修改姓名');await fill({...profile,name:'新档案姓名'});await expect(page.locator('#name')).toHaveValue('手动修改姓名');
   await expect(page.locator('#consent')).not.toBeChecked();expect(await page.evaluate(()=>window.submits)).toBe(0);
+  const preview=await page.evaluate(()=>new Promise(resolve=>window.handle({type:'APPLYPILOT_ANALYZE',payload:{profile:{name:'新姓名'}}},null,resolve)));
+  expect(preview.preview.find(p=>p.label==='姓名').reason).toBe('保留手动内容');
+  await page.evaluate(()=>new Promise(resolve=>window.handle({type:'APPLYPILOT_UNDO'},null,resolve)));
+  await expect(page.locator('#name')).toHaveValue('手动修改姓名');
+  // Undo is one batch only; the second fill restores the previous automatic value.
+  await expect(page.locator('#email')).toHaveValue(profile.email);
 });
 test('mobile viewport can create and reuse a profile without overflow',async({page})=>{
   await page.setViewportSize({width:390,height:844});await page.goto('/');await editProfile(page);await analyze(page);
@@ -83,6 +89,10 @@ test('packaged extension loads offline workbench and shares the chosen profile w
     const popup=await context.newPage();await popup.goto(`chrome-extension://${id}/popup.html`);await expect(popup.locator('#profileName')).toHaveText(profile.name);await expect(popup.locator('#fillBtn')).toBeEnabled();
     const payload=await sw.evaluate(async()=> (await chrome.storage.local.get('applypilotPayload')).applypilotPayload);
     expect(payload.profile.targetRole).toBe('交互设计师');expect(payload.consent.autoSubmit).toBe(false);expect(errors).toEqual([]);
+    await sw.evaluate(async ({jd})=>chrome.storage.session.set({'applypilotJD:simulation':{jd,createdAt:Date.now()}}),{jd});
+    const imported=await context.newPage();await imported.goto(workspaceUrl+'?jdImport=simulation');await expect(imported.locator('#jdInput')).toHaveValue(jd);
+    expect(await sw.evaluate(async()=>Boolean((await chrome.storage.session.get('applypilotJD:simulation'))['applypilotJD:simulation']))).toBe(false);
+    await imported.close();
     await editProfile(page,{summary:'修改后必须重新选择版本。'});await expect(popup.locator('#fillBtn')).toBeDisabled();
     const recognized=await page.evaluate(async()=>{
       const canvas=document.createElement('canvas');canvas.width=1000;canvas.height=220;const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,1000,220);ctx.fillStyle='black';ctx.font='36px Arial';ctx.fillText('Procurement supplier orders',20,80);ctx.fillText('Office documentation support',20,140);

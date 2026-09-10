@@ -64,6 +64,8 @@
   const visible = el => { const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return s.display !== "none" && s.visibility !== "hidden" && r.width > 0 && r.height > 0; };
   const forbidden = text => /验证码|captcha|密码|password|身份证|证件号码|证件类型|nationalid|socialsecurity|ssn|passport|承诺|声明|同意|签名|signature|搜索|search|firstname|lastname/.test(text);
   const written = new WeakMap();
+  let lastBatch = [];
+  const controls = () => [...document.querySelectorAll("input:not([type]), input[type='text'], input[type='email'], input[type='tel'], input[type='url'], input[type='number'], input[type='date'], textarea, select")];
   const currentValue = el => String(el.isContentEditable ? el.textContent : el.value || '').trim();
   function labelText(node) {
     if (!node) return '';
@@ -84,9 +86,9 @@
   }
 
   function rawFieldText(el) {
-    const labels = [...(el.labels || [])].map(x => x.innerText).join(" ");
+    const labels = [...(el.labels || [])].map(labelText).join(" ");
     const container = el.closest("label, [class*='form-item'], [class*='formItem'], [class*='field'], [role='group'], .ant-form-item, .semi-form-field");
-    return [labels, el.getAttribute("aria-label"), el.placeholder, el.name, container?.innerText].filter(Boolean).join(" ").trim().slice(0,120);
+    return (labels || el.getAttribute("aria-label") || el.placeholder || el.name || labelText(container)).trim().slice(0,120);
   }
 
   function bestValue(el, profile) {
@@ -160,7 +162,8 @@
 
   function fill(payload) {
     const profile = payload?.profile || {};
-    const elements = [...document.querySelectorAll("input:not([type='hidden']):not([type='file']):not([type='password']):not([type='checkbox']):not([type='radio']), textarea, select, [contenteditable='true']")];
+    const elements = controls();
+    const batch = [];
     let filled = 0, skipped = 0;
     for (const el of elements) {
       if (el.disabled || el.readOnly || !visible(el)) { skipped++; continue; }
@@ -168,25 +171,53 @@
       if (!match || match.score < 55) { skipped++; continue; }
       const current = currentValue(el);
       if (written.has(el) ? current !== written.get(el) : Boolean(current)) { skipped++; continue; }
-      if (setTextValue(el, match.value)) { written.set(el,currentValue(el)); mark(el); filled++; } else skipped++;
+      const before = el.value, style = el.getAttribute('style');
+      if (setTextValue(el, match.value)) { batch.push({el,before,after:el.value,style}); written.set(el,currentValue(el)); mark(el); filled++; } else skipped++;
     }
-    const requiredMissing = elements.filter(el => visible(el) && !el.disabled && (el.required || el.getAttribute("aria-required") === "true" || /\*/.test(rawFieldText(el))) && !(el.value || el.textContent || "").trim()).map(rawFieldText).filter(Boolean);
+    if(batch.length) lastBatch = batch;
+    const requiredMissing = elements.filter(el => visible(el) && !el.disabled && (el.required || el.getAttribute("aria-required") === "true" || /\*/.test(rawFieldText(el))) && !currentValue(el)).map(rawFieldText).filter(Boolean);
     const attachmentFields = [...document.querySelectorAll('input[type="file"]')].filter(visible).map(el => ({field_label:rawFieldText(el) || "附件上传",accept:el.accept || "由企业配置决定"}));
     return {ok:filled > 0 || requiredMissing.length > 0 || attachmentFields.length > 0, filled, skipped, requiredMissing:[...new Set(requiredMissing)].slice(0,20), attachmentFields, message:filled ? "填写完成" : "没有识别到可安全填写的常规字段"};
   }
 
   function analyze(payload) {
     const profile = payload?.profile || {};
-    const elements = [...document.querySelectorAll("input:not([type='hidden']):not([type='file']):not([type='password']):not([type='checkbox']):not([type='radio']), textarea, select, [contenteditable='true']")];
-    const recognized = elements.filter(el => visible(el) && !el.disabled && bestValue(el, profile)?.score >= 55).length;
-    const requiredMissing = elements.filter(el => visible(el) && !el.disabled && (el.required || el.getAttribute("aria-required") === "true" || /\*/.test(rawFieldText(el))) && !(el.value || el.textContent || "").trim()).map(rawFieldText).filter(Boolean);
+    const elements = controls();
+    const preview = elements.filter(el=>visible(el)).map(el=>{
+      const match=bestValue(el,profile), current=currentValue(el);
+      const reason=el.disabled||el.readOnly?'只读字段':!match?'无可靠匹配':(written.has(el)?current!==written.get(el):Boolean(current))?'保留手动内容':el.tagName==='SELECT'&&![...el.options].some(o=>!o.disabled&&o.value&&(normalize(o.text)===normalize(match.value)||normalize(o.value)===normalize(match.value)))?'没有对应选项':'';
+      return {label:rawFieldText(el)||el.id||'未命名字段',key:match?.key||'',value:reason?'':match.value,reason};
+    });
+    const recognized = preview.filter(p=>!p.reason).length;
+    const requiredMissing = elements.filter(el => visible(el) && !el.disabled && (el.required || el.getAttribute("aria-required") === "true" || /\*/.test(rawFieldText(el))) && !currentValue(el)).map(rawFieldText).filter(Boolean);
     const attachmentFields = [...document.querySelectorAll('input[type="file"]')].filter(visible).map(el => ({field_label:rawFieldText(el) || "附件上传",accept:el.accept || "由企业配置决定"}));
-    return {ok:recognized > 0 || requiredMissing.length > 0 || attachmentFields.length > 0, recognized, requiredMissing:[...new Set(requiredMissing)].slice(0,20), attachmentFields, message:recognized ? "分析完成" : "没有识别到可安全填写的字段"};
+    return {ok:true, recognized, preview:preview.slice(0,100), requiredMissing:[...new Set(requiredMissing)].slice(0,20), attachmentFields, message:recognized ? "分析完成" : "没有识别到可安全填写的字段"};
+  }
+
+  function undo() {
+    let restored=0,skipped=0;
+    for(const {el,before,after,style} of lastBatch) {
+      if(!el.isConnected||el.value!==after||el.disabled||el.readOnly){skipped++;continue;}
+      const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(proto,'value').set.call(el,before);
+      el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));
+      written.delete(el);delete el.dataset.applypilotFilled;
+      if(style===null)el.removeAttribute('style');else el.setAttribute('style',style);
+      restored++;
+    }
+    lastBatch=[];return {ok:true,restored,skipped};
+  }
+
+  function captureJD() {
+    const selection=window.getSelection()?.toString().trim();
+    if(!selection) return {ok:false,message:'请先在招聘页面选中岗位职责和任职要求，再点击“用选中 JD 优化简历”。'};
+    if(selection.length<40||selection.length>20000)return {ok:false,message:'请选择 40–20000 字的岗位职责和任职要求'};
+    return {ok:true,jd:selection,title:document.title.slice(0,200)};
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (!["APPLYPILOT_FILL", "APPLYPILOT_ANALYZE"].includes(message?.type)) return;
-    try { sendResponse(message.type === "APPLYPILOT_FILL" ? fill(message.payload) : analyze(message.payload)); }
+    if (!["APPLYPILOT_FILL", "APPLYPILOT_ANALYZE", "APPLYPILOT_UNDO", "APPLYPILOT_CAPTURE_JD"].includes(message?.type)) return;
+    try { sendResponse(message.type === "APPLYPILOT_FILL" ? fill(message.payload) : message.type==='APPLYPILOT_UNDO'?undo():message.type==='APPLYPILOT_CAPTURE_JD'?captureJD():analyze(message.payload)); }
     catch (err) { sendResponse({ok:false, filled:0, skipped:0, message:err.message || "页面字段识别失败"}); }
   });
 })();

@@ -127,7 +127,7 @@
           </section>
 
           <section class="results hidden" id="results" aria-live="polite">
-            <section class="jd-card"><h3>按当前 JD 深度优化岗位版</h3><p>将主档案中的已有经历改写为当前岗位版正文，保留主档案原文。生成后核对正文并导出 Word。服务由部署方提供。</p><label><input id="allowProfileRewrite" type="checkbox">同意将主档案中的简历内容发送至内容生成服务</label><button id="rewriteProfileVersion" class="secondary-button">深度改写当前岗位版</button><button id="restoreProfileVersion" class="secondary-button">恢复本机生成版本</button><p id="profileRewriteStatus" role="status"></p></section>
+            <section class="jd-card"><h3>对话修改岗位版正文</h3><p>输入具体要求，例如“突出采购协调，把科研描述压缩为两句”。可在上一轮基础上继续修改；新经历、工具或成果请先在主档案核对保存。生成内容仍须人工核对，不保证招聘通过率。</p><label>本轮修改要求<textarea id="rewriteInstruction" maxlength="2000" rows="3" placeholder="突出哪些已有经历、调整哪些表达？"></textarea></label><label>内容服务地址（插件使用，由部署者提供）<input id="profileServiceUrl" type="url" placeholder="https://[your-service]"></label><label><input id="allowProfileRewrite" type="checkbox">同意将简历原文、当前草稿、JD 和修改要求发送至内容生成服务</label><button id="rewriteProfileVersion" class="secondary-button">生成 / 继续修改正文</button><button id="restoreProfileVersion" class="secondary-button">恢复本机生成版本</button><p id="profileRewriteStatus" role="status"></p><div id="rewriteConversation" aria-live="polite"></div><div id="rewriteComparison"></div><button id="applyProfileDraft" class="secondary-button" hidden>核对无误，应用到岗位版</button></section>
             <div class="result-summary">
               <div class="score-card">
                 <div class="score-gauge" id="scoreGauge"><div><strong id="matchScore">0</strong><span>/100</span></div></div>

@@ -1,9 +1,10 @@
 import {env} from 'cloudflare:workers';
 import {generateRewrite} from '@/lib/rewrite-service.mjs';
 type RewriteEnv={RESUME_AI_ENDPOINT?:string;RESUME_AI_MODEL?:string;RESUME_AI_API_KEY?:string;RESUME_REWRITE_LIMITER?:{limit(input:{key:string}):Promise<{success:boolean}>}};
+const headers={'Cache-Control':'no-store','Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type'};
+export async function OPTIONS(){return new Response(null,{status:204,headers});}
 export async function POST(request:Request) {
   const settings=env as unknown as RewriteEnv;
-  const headers={'Cache-Control':'no-store'};
   if(!settings.RESUME_AI_API_KEY || !settings.RESUME_AI_ENDPOINT || !settings.RESUME_AI_MODEL || !settings.RESUME_REWRITE_LIMITER) return Response.json({error:'管理员尚未配置内容生成服务。可使用本机精简改写，或直接编辑优化稿。'}, {status:503,headers});
   if(Number(request.headers.get('Content-Length') || 0)>200000) return Response.json({error:'请求过大'},{status:413,headers});
   const key=request.headers.get('CF-Connecting-IP') || 'unidentified';

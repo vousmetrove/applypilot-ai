@@ -233,6 +233,26 @@ chrome.storage.local.get(["applypilotPayload","applypilotDevice","applypilotApiB
   chrome.runtime.sendMessage({type:"APPLYPILOT_POLL_COMMANDS"});
 });
 $("#openWorkbench").addEventListener("click", () => chrome.runtime.openOptionsPage());
+$("#captureJD").addEventListener("click", async () => {
+  try {
+    const result=await runOnCurrentTab('APPLYPILOT_CAPTURE_JD');
+    const id=crypto.randomUUID();
+    await chrome.storage.session.set({['applypilotJD:'+id]:{jd:result.jd,title:result.title,createdAt:Date.now()}});
+    await chrome.tabs.create({url:chrome.runtime.getURL('workspace.html')+'?jdImport='+encodeURIComponent(id)});
+  } catch(error){showResult(error.message,true);}
+});
+$("#previewBtn").addEventListener("click", async () => {
+  try {
+    const result=await runOnCurrentTab('APPLYPILOT_ANALYZE');
+    const list=$('#fieldPreview');list.replaceChildren();
+    for(const field of result.preview||[]){const row=document.createElement('p');row.textContent=`${field.label} → ${field.reason||field.value}`;list.append(row);}
+    showFillResult(result,false);
+  } catch(error){showResult(error.message,true);}
+});
+$("#undoBtn").addEventListener("click", async () => {
+  try {const result=await runOnCurrentTab('APPLYPILOT_UNDO');showResult(`已撤销 ${result.restored} 项；跳过 ${result.skipped} 项（手动修改、只读或页面已变化）。`);}
+  catch(error){showResult(error.message,true);}
+});
 $("#importFile").addEventListener("change", async event => {
   const file=event.target.files[0]; if (!file) return;
   if(file.size > 1024*1024) {showResult("档案 JSON 不能超过 1 MB",true); return;}

@@ -116,30 +116,45 @@ window.ApplyPilotIntake={
   }
 };
 
+let rewriteEpoch=0,pendingDraft=null;
+function clearRewriteDraft(){rewriteEpoch++;pendingDraft=null;$('#applyProfileDraft').hidden=true;$('#rewriteComparison').replaceChildren();}
+$('#jdInput').addEventListener('input',clearRewriteDraft);
 $('#rewriteProfileVersion').addEventListener('click',async()=>{
   const result=currentResult,button=$('#rewriteProfileVersion'),status=$('#profileRewriteStatus');
   if(!result){status.textContent='请先导入并核对主档案、填写 JD，再生成岗位版';return;}
   if(!$('#allowProfileRewrite').checked){status.textContent='请先同意发送简历内容';return;}
-  button.disabled=true;const source=JSON.stringify(profile);
+  if($('#jdInput').value.trim()!==result.jd){status.textContent='JD 已变化，请先重新生成岗位版';return;}
+  button.disabled=true;const source=JSON.stringify(profile),epoch=++rewriteEpoch,instruction=$('#rewriteInstruction').value.trim();
   try {
     const keys=['summary','experience1Description','experience2Description','internshipDescription','project1','project2','skills','english','tools','otherExperience'].filter(k=>profile[k]?.trim());
     if(!keys.length)throw Error('主档案中还没有可改写的经历，请先补充');
     const paragraphs=keys.map((key,id)=>({id,original:profile[key]}));
     const context=[...paragraphs,...['school','major','degree','experience1Role','experience2Role','internshipRole','project1Title','project2Title'].filter(k=>profile[k]).map((k,i)=>({id:100+i,original:`${k}: ${profile[k]}`}))];
-    let base='';const configured=$('#rewriteServiceUrl').value.trim();
+    let base='';const configured=$('#profileServiceUrl').value.trim()||$('#rewriteServiceUrl').value.trim()||(location.protocol==='chrome-extension:'?'https://applypilot-ai.meiqi011216.chatgpt.site':'');
     if(configured){const url=new URL(configured);if(url.protocol!=='https:')throw Error('生成服务必须使用 HTTPS');base=url.origin;if(location.protocol==='chrome-extension:'&&!(await chrome.permissions.request({origins:[`${url.protocol}//${url.hostname}/*`]})))throw Error('未授权访问生成服务');}
     else if(location.protocol==='chrome-extension:')throw Error('插件中请填写部署方提供的生成服务地址，或使用网站的生成服务');
     status.textContent='正在生成实际替换内容…';
-    const response=await fetch(`${base}/api/resume/rewrite`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({schema:'applypilot-rewrite-v1',jd:result.jd,paragraphs,context}),signal:AbortSignal.timeout(55000)});
+    const previous=pendingDraft?.result===result?pendingDraft.fields:result.rewrittenFields;
+    const draft=previous?keys.map((key,id)=>({id,optimized:previous[key]||profile[key]})):undefined;
+    const response=await fetch(`${base}/api/resume/rewrite`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({schema:'applypilot-rewrite-v1',jd:result.jd,paragraphs,context,instruction,draft}),signal:AbortSignal.timeout(55000)});
     const data=await response.json();if(!response.ok)throw Error(data.error||'生成失败');
-    if(currentResult!==result||JSON.stringify(profile)!==source)throw Error('档案或岗位已变化，生成结果未覆盖当前内容');
+    if(currentResult!==result||JSON.stringify(profile)!==source||rewriteEpoch!==epoch||$('#jdInput').value.trim()!==result.jd)throw Error('档案或岗位已变化，生成结果未覆盖当前内容');
     if(!Array.isArray(data.paragraphs)||data.paragraphs.length!==keys.length)throw Error('服务返回的段落不完整');
     const next={},ids=new Set();for(const p of data.paragraphs){if(!Number.isInteger(p.id)||!keys[p.id]||ids.has(p.id))throw Error('服务返回段落编号错误');ids.add(p.id);next[keys[p.id]]=validateRewrite(profile[keys[p.id]],p.optimized);}
     if(keys.every(k=>next[k]===profile[k]))throw Error('没有生成实际修改');
-    result.rewrittenFields=next;renderResult();saveApplicationVersion(result);await persistApplication(result);status.textContent='岗位版正文已更新。主档案保持原文，请核对后导出 Word。';switchTab('resume');
+    pendingDraft={result,fields:next,source,epoch};
+    const comparison=$('#rewriteComparison');comparison.replaceChildren();
+    for(const key of keys){const block=document.createElement('section');const label=document.querySelector(`[data-profile="${key}"]`)?.closest('label')?.textContent.trim()||key;const title=document.createElement('h4');title.textContent=label;const before=document.createElement('p');before.textContent='原文：'+profile[key];const after=document.createElement('p');after.textContent='修改稿：'+next[key];block.append(title,before,after);comparison.append(block);}
+    const turn=document.createElement('p');turn.textContent=`你的要求：${instruction||'按 JD 优化正文'} → 已生成待核对稿`;$('#rewriteConversation').append(turn);
+    $('#applyProfileDraft').hidden=false;status.textContent='已生成待核对正文，尚未替换岗位版。可继续提出修改要求，或核对后应用。';
   }catch(error){status.textContent=error.message;}finally{button.disabled=false;}
 });
-$('#restoreProfileVersion').addEventListener('click',()=>{if(currentResult){delete currentResult.rewrittenFields;renderResult();saveApplicationVersion(currentResult);persistApplication(currentResult);$('#profileRewriteStatus').textContent='已恢复本机生成版本';}});
+$('#applyProfileDraft').addEventListener('click',async()=>{
+  const draft=pendingDraft;if(!draft)return;
+  if(draft.result!==currentResult||draft.source!==JSON.stringify(profile)||draft.epoch!==rewriteEpoch||$('#jdInput').value.trim()!==draft.result.jd){clearRewriteDraft();$('#profileRewriteStatus').textContent='内容已变化，请重新生成';return;}
+  currentResult.rewrittenFields=draft.fields;clearRewriteDraft();renderResult();saveApplicationVersion(currentResult);await persistApplication(currentResult);$('#profileRewriteStatus').textContent='岗位版正文已更新。主档案保持原文，请核对后导出 Word。';switchTab('resume');
+});
+$('#restoreProfileVersion').addEventListener('click',()=>{clearRewriteDraft();if(currentResult){delete currentResult.rewrittenFields;renderResult();saveApplicationVersion(currentResult);persistApplication(currentResult);$('#profileRewriteStatus').textContent='已恢复本机生成版本';}});
 
 async function apiJson(url, options = {}) {
   if (!CLOUD_MODE) throw new Error("当前为本机模式；云端功能需要单独部署和登录");
@@ -234,7 +249,7 @@ function openProfile() {
   $$('[data-profile]').forEach(element => element.value = profile[element.dataset.profile] || "");
   $("#profileDialog").classList.remove("hidden");
   document.body.style.overflow = "hidden";
-  setTimeout(() => $('[data-profile="name"]').focus(), 50);
+  $('[data-profile="name"]').focus();
 }
 function closeProfile() { $("#profileDialog").classList.add("hidden"); document.body.style.overflow = ""; }
 
@@ -284,11 +299,13 @@ function nextVersionNumber() {
 }
 function scoreResult(keywords, matched) { return keywordCoverage(keywords, matched); }
 function invalidateResult() {
+  clearRewriteDraft();$('#rewriteConversation').replaceChildren();
   if (currentResult) { currentResult = null; $("#results").classList.add("hidden"); showToast("档案已变化，请重新分析岗位；历史记录保留原版本"); }
   if (globalThis.chrome?.storage?.local) chrome.storage.local.remove('applypilotPayload');
 }
 
 function analyzeJD() {
+  clearRewriteDraft();$('#rewriteConversation').replaceChildren();
   if (!cloudReady) { showToast("正在读取云端档案，请稍后生成"); return; }
   if (!profile.name.trim()) { showToast("请先填写姓名和真实经历，再生成简历"); openProfile(); return; }
   const jd = $("#jdInput").value.trim();
@@ -454,7 +471,7 @@ function safeFileName(name) { return name.replace(/[\\/:*?"<>|]/g, "-"); }
 function downloadBlob(blob, filename) { const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = filename; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1500); }
 
 function autofillPayload() {
-  return createPayload(profile, {targetRole:currentResult?.role || "",targetCompany:currentResult?.company || "",selfIntroduction:currentResult ? tailoredSummary(currentResult) : profile.summary});
+  return createPayload(currentResult?resumeProfile(currentResult):profile, {targetRole:currentResult?.role || "",targetCompany:currentResult?.company || "",selfIntroduction:currentResult ? tailoredSummary(currentResult) : profile.summary});
 }
 
 function onlineFormFields(result, source = profile) {
@@ -512,7 +529,7 @@ function buildStructuredOutput(result) {
       skills:rankSkills(result).slice(0,18),
       truthfulness_guard:{unsupported_keywords_excluded:result.missing, hard_requirement_gaps:hardGaps},
     },
-    online_form_fields:onlineFormFields(result),
+    online_form_fields:onlineFormFields(result,resumeProfile(result)),
     attachments:requiredAttachmentPlan(result),
     docx_resume_instructions:`已生成可下载的真实 .docx 文件：${safeFileName(`${result.company}-${result.role}-${profile.name || "候选人"}-V${String(result.versionNo).padStart(2,"0")}.docx`)}。提交前请核对事实、日期、数字和企业要求；材料清单会写入文档末尾供人工确认。`,
     wechat_operation_notes:"在微信手机端打开简投：粘贴 JD → 生成岗位专属结果 → 在材料库一次上传证书 → 在投递进度更新状态。由于微信内置浏览器不能运行 Chrome 扩展，第三方飞书/Moka 页面自动填表需在桌面 Chrome 使用浏览器助手；手机端可复制 JSON/字段值并手动上传，验证码、声明和最终提交始终由本人确认。",
@@ -713,6 +730,18 @@ try {
   const last = JSON.parse(profileStore.getItem(storageKey("applypilot-last-result")) || "null");
   if (last?.jd) { $("#companyInput").value = last.company || ""; $("#roleInput").value = last.role || ""; $("#trackSelect").value = TRACKS[last.track] ? last.track : "auto"; $("#jdInput").value = last.jd; $("#jdCount").textContent = `${last.jd.length} 字`; }
 } catch {}
+
+if(location.protocol==='chrome-extension:'){
+  const importId=new URLSearchParams(location.search).get('jdImport');
+  if(importId){
+    const key='applypilotJD:'+importId;
+    chrome.storage.session.get(key).then(async data=>{
+      const item=data[key];await chrome.storage.session.remove(key);
+      if(!item||typeof item.jd!=='string'||item.jd.length<40||item.jd.length>20000||Date.now()-item.createdAt>10*60*1000){showToast('选中 JD 已过期，请返回招聘页重新选择');return;}
+      $('#jdInput').value=item.jd;$('#jdInput').dispatchEvent(new Event('input'));showToast('已带入选中 JD，请核对后生成岗位版');
+    }).catch(()=>showToast('JD 读取失败，请重新选择'));
+  }
+}
 
 $("#exportBackup").addEventListener("click", () => {
   const backup = {schema:"applypilot-backup-v1",profile:cleanProfile(profile,{includeSensitive:true})};

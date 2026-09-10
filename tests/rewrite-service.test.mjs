@@ -4,6 +4,14 @@ import {rewriteParagraph,validateRewrite,createRewriteRequest} from '../public/r
 import {validateRequest,validateResponse,generateRewrite} from '../lib/rewrite-service.mjs';
 const original='我主要负责的是整理会议材料，还会跟进老师交办的事情，协助完成 3 次活动。';
 const jd='项目运营岗位：需要整理会议材料、协调工作进度并跟进项目执行。要求具备细致的文档整理能力和团队沟通能力。';
+
+test('conversational revisions preserve original evidence and reject contaminated drafts',()=>{
+  const request={jd,instruction:'精简表达，突出会议跟进',paragraphs:[{id:0,original}],draft:[{id:0,optimized:rewriteParagraph(original,jd)}]};
+  assert.equal(validateRequest(request).paragraphs[0].original,original);
+  assert.throws(()=>validateRequest({...request,instruction:'a'.repeat(2001)}),/2000/);
+  assert.throws(()=>validateRequest({...request,draft:[{id:0,optimized:'主导完成 30 次活动。'}]}),/数字/);
+  assert.throws(()=>validateRequest({...request,draft:[{id:3,optimized:original}]}),/编号/);
+});
 test('local rewrite produces a concrete replacement without manufacturing results',()=>{
   const output=rewriteParagraph(original,jd);assert.notEqual(output,original);assert.match(output,/文档整理：负责整理会议材料；跟进教师交办事项/);assert.match(output,/协助完成 3 次活动/);assert.equal(validateRewrite(original,output),output);
 });
